@@ -1,41 +1,43 @@
+import React from 'react'; // Importation de React
+import { useState } from "react"; // Importation de useState pour gérer l'état local
+import { useNavigate } from "react-router-dom"; // Importation de useNavigate pour la navigation
+import { useToast } from "@/hooks/use-toast"; // Importation du hook pour afficher des notifications
+import { Button } from "@/components/ui/button"; // Importation du composant Button
+import { Input } from "@/components/ui/input"; // Importation du composant Input
+import { Label } from "@/components/ui/label"; // Importation du composant Label
+import { Card } from "@/components/ui/card"; // Importation du composant Card
+import { useAuth } from "@/hooks/useAuth"; // Importation du hook d'authentification
+import { Link } from "react-router-dom"; // Importation de Link pour la navigation
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
-
+// Déclaration du composant Login
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { login } = useAuth();
+  const [email, setEmail] = useState(""); // État pour l'email
+  const [password, setPassword] = useState(""); // État pour le mot de passe
+  const [isLoading, setIsLoading] = useState(false); // État pour gérer le chargement
+  const navigate = useNavigate(); // Hook pour la navigation
+  const { toast } = useToast(); // Hook pour afficher des notifications
+  const { login } = useAuth(); // Fonction de connexion du hook d'authentification
 
+  // Fonction pour gérer la soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+    e.preventDefault(); // Empêche le rechargement de la page
+    setIsLoading(true); // Indique que le chargement a commencé
 
     try {
-      await login(email, password);
+      await login(email, password); // Appelle la fonction de connexion
       toast({
-        title: "Connexion réussie",
+        title: "Connexion réussie", // Notification de succès
         description: "Vous êtes maintenant connecté",
       });
-      navigate("/");
+      navigate("/"); // Redirige vers la page d'accueil
     } catch (error) {
       toast({
-        title: "Erreur de connexion",
+        title: "Erreur de connexion", // Notification d'erreur
         description: "Email ou mot de passe incorrect",
-        variant: "destructive",
+        variant: "destructive", // Variante pour indiquer une erreur
       });
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Indique que le chargement est terminé
     }
   };
 
@@ -54,7 +56,7 @@ const Login = () => {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)} // Met à jour l'état lors du changement
               required
               className="mt-1"
               placeholder="exemple@email.com"
@@ -66,7 +68,7 @@ const Login = () => {
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)} // Met à jour l'état lors du changement
               required
               className="mt-1"
               placeholder="••••••••"
@@ -74,11 +76,11 @@ const Login = () => {
           </div>
           <div className="flex items-center justify-between">
             <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
-              Mot de passe oublié ?
+              Mot de passe oublié ? {/* Lien vers la page de réinitialisation du mot de passe */}
             </Link>
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Connexion en cours..." : "Se connecter"}
+            {isLoading ? "Connexion en cours..." : "Se connecter"} {/* Affiche le texte en fonction de l'état de chargement */}
           </Button>
           <p className="text-center text-sm text-gray-600">
             Pas encore de compte ?{" "}
@@ -92,4 +94,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Login; // Exportation du composant Login
