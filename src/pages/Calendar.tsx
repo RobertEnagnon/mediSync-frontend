@@ -1,27 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { EventService } from '@/services/api/eventService'; // Importer le service des événements
+import { useToast } from '@/hooks/use-toast';
 
 const Calendar = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [events, setEvents] = useState([]); // État pour stocker les événements
+  const [loading, setLoading] = useState(true); // État pour gérer le chargement
+  const [error, setError] = useState(null); // État pour gérer les erreurs
+  const { toast } = useToast();
 
-  const events = [
-    {
-      title: "Consultation Dr. Martin",
-      time: "09:00",
-      duration: "1h",
-      type: "Rendez-vous",
-    },
-    {
-      title: "Suivi Mme Dubois",
-      time: "11:30",
-      duration: "30min",
-      type: "Suivi",
-    },
-  ];
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const data = await EventService.getAll(); // Récupérer la liste des événements
+        setEvents(data);
+      } catch (err) {
+        setError(err.message); // Gérer les erreurs
+        toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
+      } finally {
+        setLoading(false); // Fin du chargement
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  if (loading) return <div>Loading...</div>; // Afficher un message de chargement
+  if (error) return <div>Error: {error}</div>; // Afficher un message d'erreur
 
   return (
     <Layout>
@@ -53,7 +62,7 @@ const Calendar = () => {
             <h2 className="text-xl font-semibold">Événements du jour</h2>
             {events.map((event, index) => (
               <Card
-                key={index}
+                key={event.id}
                 className={cn(
                   "p-4 border-l-4",
                   event.type === "Rendez-vous"

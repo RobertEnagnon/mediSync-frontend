@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,29 +13,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { AppointmentService } from "@/services/api/appointmentService";
 
 const Appointments = () => {
   const [search, setSearch] = useState("");
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const appointments = [
-    {
-      id: 1,
-      client: "Jean Dupont",
-      date: "2024-04-15",
-      time: "09:00",
-      type: "Consultation",
-      status: "À venir",
-    },
-    {
-      id: 2,
-      client: "Marie Martin",
-      date: "2024-04-15",
-      time: "10:30",
-      type: "Suivi",
-      status: "À venir",
-    },
-  ];
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const data = await AppointmentService.getAll();
+        setAppointments(data);
+      } catch (err) {
+        setError(err.message);
+        toast({ title: "Erreur", description: err.message, variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAppointments();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   const handleNewAppointment = (e: React.FormEvent) => {
     e.preventDefault();

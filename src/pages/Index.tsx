@@ -2,23 +2,49 @@ import { Card } from "@/components/ui/card"; // Importation du composant Card
 import Layout from "@/components/Layout"; // Importation du composant Layout
 import { Calendar, Clock, Users } from "lucide-react"; // Importation des icônes
 import { useNavigate } from "react-router-dom"; // Importation de useNavigate pour la navigation
+import { useEffect, useState } from 'react';
+import { AppointmentService } from '@/services/api/appointmentService'; // Importer le service des rendez-vous
+import { ClientService } from '@/services/api/clientService'; // Importer le service des clients
 
 // Déclaration du composant Index
 const Index = () => {
   const navigate = useNavigate(); // Hook pour la navigation
+  const [appointmentCount, setAppointmentCount] = useState(0); // État pour stocker le nombre de rendez-vous
+  const [clientCount, setClientCount] = useState(0); // État pour stocker le nombre de clients
+  const [loading, setLoading] = useState(true); // État pour gérer le chargement
+  const [error, setError] = useState(null); // État pour gérer les erreurs
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const appointments = await AppointmentService.getAll(); // Récupérer tous les rendez-vous
+        const clients = await ClientService.getAll(); // Récupérer tous les clients
+        setAppointmentCount(appointments.length); // Mettre à jour le nombre de rendez-vous
+        setClientCount(clients.length); // Mettre à jour le nombre de clients
+      } catch (err) {
+        setError(err.message); // Gérer les erreurs
+      } finally {
+        setLoading(false); // Fin du chargement
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (loading) return <div>Loading...</div>; // Afficher un message de chargement
+  if (error) return <div>Error: {error}</div>; // Afficher un message d'erreur
 
   // Définition des statistiques à afficher
   const stats = [
     {
       title: "Rendez-vous aujourd'hui", // Titre de la statistique
-      value: "8", // Valeur de la statistique
+      value: appointmentCount, // Valeur de la statistique
       icon: Clock, // Icône associée
       color: "text-blue-500", // Couleur de l'icône
       link: "/appointments" // Lien vers la page des rendez-vous
     },
     {
       title: "Total Clients",
-      value: "124",
+      value: clientCount,
       icon: Users,
       color: "text-green-500",
       link: "/clients"

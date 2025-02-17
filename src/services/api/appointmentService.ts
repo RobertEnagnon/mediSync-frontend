@@ -2,21 +2,35 @@
 import { Appointment } from "@/types";
 import { API_BASE_URL, headers, handleResponse } from "./config";
 
-export const appointmentApiService = {
+export const AppointmentService = {
+  token: JSON.parse(localStorage.getItem('auth-storage'))?.state?.token,
   getAll: async (): Promise<Appointment[]> => {
-    const response = await fetch(`${API_BASE_URL}/appointments`);
+    const response = await fetch(`${API_BASE_URL}/appointments`,{
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${AppointmentService.token}`,
+      },
+    });
     return handleResponse(response);
   },
 
   getById: async (id: string): Promise<Appointment> => {
-    const response = await fetch(`${API_BASE_URL}/appointments/${id}`);
+    const response = await fetch(`${API_BASE_URL}/appointments/${id}`,{
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${AppointmentService.token}`,
+      },
+    });
     return handleResponse(response);
   },
 
   create: async (appointment: Omit<Appointment, 'id'>): Promise<Appointment> => {
     const response = await fetch(`${API_BASE_URL}/appointments`, {
       method: 'POST',
-      headers,
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${AppointmentService.token}`,
+      },
       body: JSON.stringify(appointment),
     });
     return handleResponse(response);
@@ -25,7 +39,10 @@ export const appointmentApiService = {
   update: async (id: string, appointment: Partial<Appointment>): Promise<Appointment> => {
     const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
       method: 'PUT',
-      headers,
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${AppointmentService.token}`,
+      },
       body: JSON.stringify(appointment),
     });
     return handleResponse(response);
@@ -34,13 +51,21 @@ export const appointmentApiService = {
   delete: async (id: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
       method: 'DELETE',
-      headers,
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${AppointmentService.token}`,
+      },
     });
     return handleResponse(response);
   },
 
   search: async (query: string): Promise<Appointment[]> => {
-    const response = await fetch(`${API_BASE_URL}/appointments/search?q=${query}`);
+    const response = await fetch(`${API_BASE_URL}/appointments/search?q=${query}`,{
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${AppointmentService.token}`,
+      },
+    });
     return handleResponse(response);
   },
 
@@ -54,7 +79,12 @@ export const appointmentApiService = {
     if (filters.date) params.append('date', filters.date);
     if (filters.clientId) params.append('clientId', filters.clientId);
     
-    const response = await fetch(`${API_BASE_URL}/appointments/filter?${params}`);
+    const response = await fetch(`${API_BASE_URL}/appointments/filter?${params}`,{
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${AppointmentService.token}`,
+      },
+    });
     return handleResponse(response);
   }
 };
