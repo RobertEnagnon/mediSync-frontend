@@ -8,7 +8,7 @@ export const AppointmentService = {
     const response = await fetch(`${API_BASE_URL}/appointments`,{
       headers: {
         ...headers,
-        Authorization: `Bearer ${AppointmentService.token}`,
+        Authorization: `Bearer ${JSON.parse(localStorage.getItem('auth-storage'))?.state?.token}`,
       },
     });
     return handleResponse(response);

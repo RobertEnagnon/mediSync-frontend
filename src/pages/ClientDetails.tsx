@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input'; // Importer le composant Input
 import { Label } from '@/components/ui/label'; // Importer le composant Label
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientService } from '@/services/api/clientService';
+import { NoteService } from '@/services/api/noteService'; // Importer le service Note
 import { AppointmentService } from '@/services/api/appointmentService';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Mail, Phone, User } from "lucide-react";
+import { format } from 'date-fns'; // Importer la fonction format de date-fns
 
 const ClientDetails = () => {
   const { id } = useParams(); // Récupérer l'ID du client depuis l'URL
@@ -20,6 +22,7 @@ const ClientDetails = () => {
   const [loading, setLoading] = useState(true); // État de chargement
   const [error, setError] = useState(null); // État d'erreur
   const [dialogOpen, setDialogOpen] = useState(false); // État pour gérer l'ouverture du dialog de modification
+  const [dialogOpenNote, setDialogOpenNote] = useState(false); // État pour gérer l'ouverture du dialog d'ajout de note
   const { toast } = useToast(); // Hook pour afficher des notifications
   const navigate = useNavigate(); // Hook pour naviguer entre les pages
 
@@ -28,10 +31,11 @@ const ClientDetails = () => {
       try {
         const data = await ClientService.getById(id); // Récupérer les détails du client
         setClient(data);
-        const appointmentsData = await AppointmentService.getById(id); // Récupérer les rendez-vous du client
-        setAppointments(appointmentsData);
         const notesData = await ClientService.getNotesById(id); // Récupérer les notes du client
         setNotes(notesData);
+        console.log("notesData: ", notesData)
+        const appointmentsData = await AppointmentService.getById(id); // Récupérer les rendez-vous du client
+        setAppointments(appointmentsData);
       } catch (err) {
         setError(err.message); // Gérer l'erreur
         toast({ title: 'Erreur', description: err.message, variant: 'destructive' });
@@ -69,6 +73,18 @@ const ClientDetails = () => {
     }
   };
 
+  // Fonction pour ajouter une note
+  const handleAddNote = async (noteContent: string) => {
+    try {
+      const newNote = await NoteService.createNote({ clientId: id, content: noteContent }); // Appeler le service pour créer une nouvelle note
+      setNotes([...notes, newNote]); // Ajouter la nouvelle note à l'état local
+      toast({ title: "Note ajoutée", description: "La note a été ajoutée avec succès." });
+      setDialogOpenNote(false); // Fermer le dialog après ajout
+    } catch (err) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    }
+  };
+
   if (loading) return <div>Loading...</div>; // Afficher un message de chargement
   // if (error) return <div>Error: {error}</div>; // Afficher un message d'erreur
 
@@ -78,6 +94,7 @@ const ClientDetails = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold">Détails du client</h1>
           <div className="flex gap-2">
+            {/* Dialog pour modifier un client */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">Modifier</Button>
@@ -103,6 +120,28 @@ const ClientDetails = () => {
                     <Label htmlFor="phone">Téléphone</Label>
                     <Input type="text" id="phone" name="phone" defaultValue={client.phone} required />
                     <Button type="submit">Mettre à jour</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+            {/* Dialog pour ajouter une note */}
+            <Dialog open={dialogOpenNote} onOpenChange={setDialogOpenNote}>
+              <DialogTrigger asChild>
+                <Button variant="outline">Ajouter une note</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Ajouter une note</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const noteContent = e.target.note.value; // Récupérer le contenu de la note
+                  handleAddNote(noteContent); // Appeler la fonction d'ajout de note
+                }}>
+                  <div className="space-y-4">
+                    <Label htmlFor="note">Contenu de la note</Label>
+                    <Input type="text" id="note" name="note" required placeholder="Entrez votre note ici..." />
+                    <Button type="submit">Ajouter</Button>
                   </div>
                 </form>
               </DialogContent>
@@ -190,7 +229,8 @@ const ClientDetails = () => {
                   <Card key={index} className="p-4">
                     <div className="flex flex-col">
                       <p>{note.content}</p>
-                      <p className="text-sm text-gray-500">{note.date}</p>
+                       {/* Formatage de la date avec date-fns */}
+                       <p className="text-sm text-gray-500">{format(new Date(note.date), 'dd/MM/yyyy HH:mm')}</p>
                     </div>
                   </Card>
                 ))
