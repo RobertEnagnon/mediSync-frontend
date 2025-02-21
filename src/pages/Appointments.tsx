@@ -21,8 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { AppointmentService } from "@/services/api/appointmentService";
-import { ClientService } from "@/services/api/clientService";
+import { appointmentService } from "@/services/api/appointmentService";
+import { clientService } from "@/services/api/clientService";
 
 const Appointments = () => {
   const [search, setSearch] = useState("");
@@ -37,7 +37,7 @@ const Appointments = () => {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const data = await AppointmentService.getAll();
+        const data = await appointmentService.getAll();
         setAppointments(data);
       } catch (err) {
         setError(err.message);
@@ -49,7 +49,7 @@ const Appointments = () => {
 
     const fetchClients = async () => {
       try {
-        const clientData = await ClientService.getAll(); // Récupérer tous les clients
+        const clientData = await clientService.getAll(); // Récupérer tous les clients
         setClients(clientData);
       } catch (err) {
         setError(err.message);
@@ -72,7 +72,7 @@ const Appointments = () => {
       notes: e.target.notes.value,
     };
     try {
-      const newAppointment = await AppointmentService.create(appointmentData); // Appeler le service pour créer un nouveau rendez-vous
+      const newAppointment = await appointmentService.create(appointmentData); // Appeler le service pour créer un nouveau rendez-vous
       setAppointments([...appointments, newAppointment]); // Ajouter le nouveau rendez-vous à l'état local
       toast({ title: "Rendez-vous ajouté", description: "Le rendez-vous a été ajouté avec succès." });
       setDialogOpen(false); // Fermer le dialog après ajout

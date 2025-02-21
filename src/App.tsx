@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip"; // Importation du fou
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"; // Importation de la gestion des requêtes
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"; // Importation des composants de routage
 import { useAuth } from "@/hooks/useAuth"; // Importation du hook d'authentification
+
+// Pages
 import Index from "./pages/Index"; // Importation de la page d'accueil
 import Calendar from "./pages/Calendar"; // Importation de la page de calendrier
 import Appointments from "./pages/Appointments"; // Importation de la page des rendez-vous
@@ -11,6 +13,11 @@ import Clients from "./pages/Clients"; // Importation de la page des clients
 import ClientDetails from "./pages/ClientDetails"; // Importation de la page des détails du client
 import Login from "./pages/Login"; // Importation de la page de connexion
 import Register from "./pages/Register"; // Importation de la page d'inscription
+import Profile from "./pages/Profile"; // Importation de la page de profil
+import Settings from "./pages/Settings"; // Importation de la page des paramètres
+import AppointmentHistory from "./pages/AppointmentHistory"; // Importation de la page de l'historique des rendez-vous
+import Notifications from "./pages/Notifications"; // Importation de la page des notifications
+import Dashboard from "./pages/Dashboard"; // Importation de la page de tableau de bord
 
 const queryClient = new QueryClient(); // Création d'une instance de QueryClient
 
@@ -36,11 +43,15 @@ const App = () => (
           <Route path="/register" element={<Register />} /> {/* Route pour la page d'inscription */}
 
           {/* Routes protégées */}
-          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /> {/* Route pour la page d'accueil */}
+          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> {/* Route pour la page de tableau de bord */}
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} /> {/* Route pour le calendrier */}
           <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} /> {/* Route pour les rendez-vous */}
+          <Route path="/appointment-history" element={<ProtectedRoute><AppointmentHistory /></ProtectedRoute>} /> {/* Route pour l'historique des rendez-vous */}
           <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} /> {/* Route pour les clients */}
           <Route path="/clients/:id" element={<ProtectedRoute><ClientDetails /></ProtectedRoute>} /> {/* Route pour les détails d'un client */}
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} /> {/* Route pour le profil */}
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} /> {/* Route pour les paramètres */}
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} /> {/* Route pour les notifications */}
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

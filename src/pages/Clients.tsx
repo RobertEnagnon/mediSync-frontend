@@ -11,83 +11,105 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Plus, Search, Filter, Mail, Phone } from "lucide-react";
+import { Plus, Search, Filter, Mail, Phone, Calendar, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ClientService } from "@/services/api/clientService";
+import { clientService } from "@/services/api/clientService";
+import { IClient } from "@/types/client";
+import { ClientForm } from "@/components/forms/client/ClientForm";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
+/**
+ * Page de gestion des clients
+ */
 const Clients = () => {
-  const [search, setSearch] = useState(""); // État pour la recherche
-  const [clients, setClients] = useState([]); // État pour la liste des clients
-  const [loading, setLoading] = useState(true); // État de chargement
-  const [error, setError] = useState(null); // État d'erreur
-  const [currentPage, setCurrentPage] = useState(1); // État pour la pagination
-  const [clientsPerPage] = useState(5); // Nombre de clients par page
-  const [dialogOpen, setDialogOpen] = useState(false); // État pour gérer l'ouverture du dialog
+  // États
+  const [search, setSearch] = useState("");
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [clientsPerPage] = useState(10);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [upcomingBirthdays, setUpcomingBirthdays] = useState<IClient[]>([]);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Chargement initial des clients
   useEffect(() => {
-    const fetchClients = async () => {
+    const fetchData = async () => {
       try {
-        const data = await ClientService.getAll();
-        setClients(data);
-      } catch (err) {
+        const [allClients, birthdays] = await Promise.all([
+          clientService.getAll(),
+          clientService.getUpcomingBirthdays(7)
+        ]);
+        setClients(allClients);
+        setUpcomingBirthdays(birthdays);
+      } catch (err: any) {
         setError(err.message);
-        toast({ title: "Erreur", description: err.message, variant: "destructive" });
+        toast({ 
+          title: "Erreur", 
+          description: err.message, 
+          variant: "destructive" 
+        });
       } finally {
         setLoading(false);
       }
     };
-    fetchClients();
+    fetchData();
   }, []);
 
-  // Fonction pour ajouter un nouveau client
-  const handleNewClient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newClient = {
-      name: e.target.name.value,
-      email: e.target.email.value,
-      phone: e.target.phone.value,
-    };
+  // Gestion de la création d'un nouveau client
+  const handleNewClient = async (data: any) => {
     try {
-      await ClientService.create(newClient);
+      await clientService.create(data);
       toast({
         title: "Client ajouté",
         description: "Le nouveau client a été ajouté avec succès.",
       });
-      setDialogOpen(false); // Fermer le dialog après ajout
-      // Rafraîchir la liste des clients après ajout
-      const updatedClients = await ClientService.getAll();
+      setDialogOpen(false);
+      
+      // Rafraîchir la liste des clients
+      const updatedClients = await clientService.getAll();
       setClients(updatedClients);
-    } catch (err) {
+    } catch (err: any) {
       if (err.message.includes("duplicate key error")) {
-        toast({ title: "Erreur", description: "Un client avec cet email existe déjà.", variant: "destructive" });
+        toast({ 
+          title: "Erreur", 
+          description: "Un client avec cet email existe déjà.", 
+          variant: "destructive" 
+        });
       } else {
-        toast({ title: "Erreur", description: err.message, variant: "destructive" });
+        toast({ 
+          title: "Erreur", 
+          description: err.message, 
+          variant: "destructive" 
+        });
       }
     }
   };
 
   // Filtrer les clients en fonction de la recherche
   const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(search.toLowerCase())
+    `${client.firstName} ${client.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+    client.email.toLowerCase().includes(search.toLowerCase()) ||
+    client.phone.toLowerCase().includes(search.toLowerCase())
   );
 
   // Pagination
   const indexOfLastClient = currentPage * clientsPerPage;
   const indexOfFirstClient = indexOfLastClient - clientsPerPage;
   const currentClients = filteredClients.slice(indexOfFirstClient, indexOfLastClient);
-
-  // Changer de page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div>Chargement...</div>;
+  if (error) return <div>Erreur: {error}</div>;
 
   return (
     <Layout>
       <div className="space-y-8">
+        {/* En-tête */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold">Clients</h1>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -97,31 +119,16 @@ const Clients = () => {
                 Nouveau client
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Nouveau client</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleNewClient} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nom complet</Label>
-                  <Input id="name" name="name" placeholder="Nom du client" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" placeholder="email@exemple.com" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Téléphone</Label>
-                  <Input id="phone" name="phone" placeholder="06 12 34 56 78" required />
-                </div>
-                <Button type="submit" className="w-full">
-                  Ajouter le client
-                </Button>
-              </form>
+              <ClientForm onSubmit={handleNewClient} onCancel={() => setDialogOpen(false)} />
             </DialogContent>
           </Dialog>
         </div>
 
+        {/* Barre de recherche et filtres */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
@@ -138,16 +145,31 @@ const Clients = () => {
           </Button>
         </div>
 
+        {/* Liste des anniversaires à venir */}
+        {upcomingBirthdays.length > 0 && (
+          <Card className="p-4 bg-blue-50">
+            <h3 className="font-medium mb-2">🎂 Anniversaires à venir</h3>
+            <div className="flex flex-wrap gap-2">
+              {upcomingBirthdays.map((client) => (
+                <span key={client._id} className="text-sm bg-white px-2 py-1 rounded">
+                  {client.firstName} {client.lastName} - {format(new Date(client.birthDate!), 'dd MMMM', { locale: fr })}
+                </span>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Liste des clients */}
         <div className="grid gap-4">
           {currentClients.map((client) => (
             <Card
-              key={client?.id}
+              key={client._id}
               className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => navigate(`/clients/${client._id}`)}
             >
               <div className="flex flex-col sm:flex-row justify-between gap-4">
                 <div>
-                  <h3 className="font-medium">{client.name}</h3>
+                  <h3 className="font-medium">{client.firstName} {client.lastName}</h3>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-2">
                     <div className="flex items-center text-gray-500">
                       <Mail className="w-4 h-4 mr-2" />
@@ -157,6 +179,20 @@ const Clients = () => {
                       <Phone className="w-4 h-4 mr-2" />
                       <span className="text-sm">{client.phone}</span>
                     </div>
+                    {client.birthDate && (
+                      <div className="flex items-center text-gray-500">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        <span className="text-sm">
+                          {format(new Date(client.birthDate), 'dd/MM/yyyy')}
+                        </span>
+                      </div>
+                    )}
+                    {client.address && (
+                      <div className="flex items-center text-gray-500">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        <span className="text-sm">{client.address}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -170,7 +206,8 @@ const Clients = () => {
             <Button
               key={index + 1}
               onClick={() => paginate(index + 1)}
-              className={`mx-1 ${currentPage === index + 1 ? 'bg-blue-500 text-white' : ''}`}
+              variant={currentPage === index + 1 ? 'default' : 'outline'}
+              className="mx-1"
             >
               {index + 1}
             </Button>
