@@ -1,5 +1,5 @@
 export interface Appointment {
-  id: string;
+  _id: string;
   title: string;
   date: string;
   time: string;
@@ -9,7 +9,7 @@ export interface Appointment {
 }
 
 export interface Client {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   phone: string;
