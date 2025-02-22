@@ -7,9 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input'; // Importer le composant Input
 import { Label } from '@/components/ui/label'; // Importer le composant Label
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ClientService } from '@/services/api/clientService';
-import { NoteService } from '@/services/api/noteService'; // Importer le service Note
-import { AppointmentService } from '@/services/api/appointmentService';
+import { clientService } from '@/services/api/clientService';
+import { noteService } from '@/services/api/noteService'; // Importer le service Note
+import { appointmentService } from '@/services/api/appointmentService';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Mail, Phone, User } from "lucide-react";
 import { format } from 'date-fns'; // Importer la fonction format de date-fns
@@ -29,12 +29,12 @@ const ClientDetails = () => {
   useEffect(() => {
     const fetchClient = async () => {
       try {
-        const data = await ClientService.getById(id); // Récupérer les détails du client
+        const data = await clientService.getById(id); // Récupérer les détails du client
         setClient(data);
-        const notesData = await ClientService.getNotesById(id); // Récupérer les notes du client
+        const notesData = await noteService.getNotesByClientId(id); // Récupérer les notes du client
         setNotes(notesData);
         console.log("notesData: ", notesData)
-        const appointmentsData = await AppointmentService.getById(id); // Récupérer les rendez-vous du client
+        const appointmentsData = await appointmentService.getById(id); // Récupérer les rendez-vous du client
         setAppointments(appointmentsData);
       } catch (err) {
         setError(err.message); // Gérer l'erreur
@@ -76,7 +76,7 @@ const ClientDetails = () => {
   // Fonction pour ajouter une note
   const handleAddNote = async (noteContent: string) => {
     try {
-      const newNote = await NoteService.createNote({ clientId: id, content: noteContent }); // Appeler le service pour créer une nouvelle note
+      const newNote = await noteService.createNote({ clientId: id, content: noteContent }); // Appeler le service pour créer une nouvelle note
       setNotes([...notes, newNote]); // Ajouter la nouvelle note à l'état local
       toast({ title: "Note ajoutée", description: "La note a été ajoutée avec succès." });
       setDialogOpenNote(false); // Fermer le dialog après ajout

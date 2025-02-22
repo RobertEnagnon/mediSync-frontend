@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { StatCard } from "@/components/Dashboard/StatCard";
 import { Calendar, Users, Clock, TrendingUp } from "lucide-react";
-import { AppointmentService } from "@/services/api/appointmentService";
+import { appointmentService } from "@/services/api/appointmentService";
 import { clientService } from "@/services/api/clientService";
 
 const Dashboard = () => {
@@ -13,13 +13,13 @@ const Dashboard = () => {
     upcomingAppointments: 0,
     monthlyGrowth: 0
   });
-
+ 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const [clients, appointments] = await Promise.all([
             clientService.getAll(),
-          AppointmentService.getAll()
+          appointmentService.getAll()
         ]);
 
         const today = new Date();

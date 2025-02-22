@@ -1,6 +1,7 @@
 
 import { create } from 'zustand';
-import authService, { AuthResponse } from '@/services/api/authService';
+import authService from '@/services/api/authService';
+import {AuthResponse} from "../types/user"
 import { persist } from 'zustand/middleware';
 
 interface AuthState {

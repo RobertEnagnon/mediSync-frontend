@@ -3,8 +3,8 @@ import Layout from "@/components/Layout"; // Importation du composant Layout
 import { Calendar, Clock, Users } from "lucide-react"; // Importation des icônes
 import { useNavigate } from "react-router-dom"; // Importation de useNavigate pour la navigation
 import { useEffect, useState } from 'react';
-import { AppointmentService } from '@/services/api/appointmentService'; // Importer le service des rendez-vous
-import { ClientService } from '@/services/api/clientService'; // Importer le service des clients
+import { appointmentService } from '@/services/api/appointmentService'; // Importer le service des rendez-vous
+import { clientService } from '@/services/api/clientService'; // Importer le service des clients
 
 // Déclaration du composant Index
 const Index = () => {
@@ -17,8 +17,8 @@ const Index = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const appointments = await AppointmentService.getAll(); // Récupérer tous les rendez-vous
-        const clients = await ClientService.getAll(); // Récupérer tous les clients
+        const appointments = await appointmentService.getAll(); // Récupérer tous les rendez-vous
+        const clients = await clientService.getAll(); // Récupérer tous les clients
         setAppointmentCount(appointments.length); // Mettre à jour le nombre de rendez-vous
         setClientCount(clients.length); // Mettre à jour le nombre de clients
       } catch (err) {

@@ -18,6 +18,10 @@ import Settings from "./pages/Settings"; // Importation de la page des paramètr
 import AppointmentHistory from "./pages/AppointmentHistory"; // Importation de la page de l'historique des rendez-vous
 import Notifications from "./pages/Notifications"; // Importation de la page des notifications
 import Dashboard from "./pages/Dashboard"; // Importation de la page de tableau de bord
+import ForgotPassword from "./pages/ForgotPassword"; // Importation de la page de mot de passe oublié
+import ResetPassword from "./pages/ResetPassword"; // Importation de la page de réinitialisation de mot de passe
+import VerifyEmail from "./pages/VerifyEmail"; // Importation de la page de vérification d'email
+import RegistrationSuccess from "./pages/RegistrationSuccess"; // Importation de la page de succès d'inscription
 
 const queryClient = new QueryClient(); // Création d'une instance de QueryClient
 
@@ -41,9 +45,13 @@ const App = () => (
           {/* Routes publiques */}
           <Route path="/login" element={<Login />} /> {/* Route pour la page de connexion */}
           <Route path="/register" element={<Register />} /> {/* Route pour la page d'inscription */}
+          <Route path="/forgot-password" element={<ForgotPassword />} /> {/* Route pour la page de mot de passe oublié */}
+          <Route path="/reset-password" element={<ResetPassword />} /> {/* Route pour la page de réinitialisation de mot de passe */}
+          <Route path="/verify-email" element={<VerifyEmail />} /> {/* Route pour la page de vérification d'email */}
+          <Route path="/registration-success" element={<RegistrationSuccess />} /> {/* Route pour la page de succès d'inscription */}
 
           {/* Routes protégées */}
-          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> {/* Route pour la page de tableau de bord */}
+          <Route path="/"  element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> {/* Route pour la page de tableau de bord */}
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} /> {/* Route pour le calendrier */}
           <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} /> {/* Route pour les rendez-vous */}
           <Route path="/appointment-history" element={<ProtectedRoute><AppointmentHistory /></ProtectedRoute>} /> {/* Route pour l'historique des rendez-vous */}

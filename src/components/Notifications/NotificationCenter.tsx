@@ -1,115 +1,366 @@
-import { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { 
+  Bell, 
+  Check, 
+  Trash2, 
+  ChevronLeft, 
+  ChevronRight,
+  RefreshCw,
+  CheckCheck,
+  Calendar,
+  FileText,
+  Receipt
+} from 'lucide-react';
+import { INotification, NotificationResponse, NotificationData } from '../../types/notification';
+import { notificationService } from '../../services/api/notificationService';
+import { useToast } from '../../hooks/use-toast';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { ScrollArea } from '../ui/scroll-area';
+import { Skeleton } from '../ui/skeleton';
 
-interface Notification {
-  _id: string;
-  title: string;
-  message: string;
-  type: string;
-  read: boolean;
-  createdAt: string;
-}
+const NotificationIcon: React.FC<{ type: string }> = ({ type }) => {
+  switch (type) {
+    case 'APPOINTMENT_REMINDER':
+    case 'APPOINTMENT_MODIFICATION':
+    case 'APPOINTMENT_CANCELLATION':
+      return <Calendar className="h-4 w-4" />;
+    case 'NEW_DOCUMENT':
+      return <FileText className="h-4 w-4" />;
+    case 'NEW_INVOICE':
+    case 'INVOICE_PAID':
+    case 'INVOICE_OVERDUE':
+      return <Receipt className="h-4 w-4" />;
+    default:
+      return <Bell className="h-4 w-4" />;
+  }
+};
 
-export const NotificationCenter = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const { toast } = useToast();
+const NotificationContent: React.FC<{ data: NotificationData }> = ({ data }) => {
+  if (!data) return null;
 
-  useEffect(() => {
-    // Connexion WebSocket pour les notifications en temps réel
-    const ws = new WebSocket(process.env.REACT_APP_WS_URL || 'ws://localhost:3001');
+  return (
+    <div className="mt-1 text-sm">
+      {data.appointmentId && (
+        <p className="text-sm text-gray-500">
+          {data.date && (
+            <>RDV le {new Date(data.date).toLocaleString()}</>
+          )}
+          {data.reason && (
+            <> - {data.reason}</>
+          )}
+        </p>
+      )}
+      {data.invoiceId && (
+        <p className="text-sm text-gray-500">
+          Facture n°{data.number}
+          {data.amount && (
+            <> - {data.amount.toLocaleString()}€</>
+          )}
+        </p>
+      )}
+      {data.documentId && (
+        <p className="text-sm text-gray-500">
+          Document : {data.fileName}
+        </p>
+      )}
+    </div>
+  );
+};
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'notification') {
-        setNotifications(prev => [data.notification, ...prev]);
-        setUnreadCount(prev => prev + 1);
-        toast({
-          title: data.notification.title,
-          description: data.notification.message,
-        });
-      }
-    };
-
-    // Charger les notifications existantes
-    fetchNotifications();
-
-    return () => {
-      ws.close();
-    };
-  }, []);
-
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch('/api/notifications');
-      const data = await response.json();
-      setNotifications(data);
-      setUnreadCount(data.filter(n => !n.read).length);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
-  };
-
-  const markAsRead = async (id: string) => {
-    try {
-      await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
-      setNotifications(notifications.map(n => 
-        n._id === id ? { ...n, read: true } : n
-      ));
-      setUnreadCount(prev => prev - 1);
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
+const NotificationItem: React.FC<{
+  notification: INotification;
+  onMarkAsRead: (id: string) => void;
+  onDelete: (id: string) => void;
+}> = ({ notification, onMarkAsRead, onDelete }) => {
+  const getNotificationColor = (type: string, severity: string) => {
+    // Priorité à la sévérité pour la couleur
+    switch (severity) {
+      case 'error':
+        return 'bg-red-100 border-red-200';
+      case 'warning':
+        return 'bg-orange-100 border-orange-200';
+      case 'success':
+        return 'bg-green-100 border-green-200';
+      case 'info':
+        return 'bg-blue-100 border-blue-200';
+      default:
+        // Fallback sur le type si pas de sévérité
+        switch (type) {
+          case 'APPOINTMENT_REMINDER':
+          case 'APPOINTMENT_MODIFICATION':
+            return 'bg-blue-100 border-blue-200';
+          case 'APPOINTMENT_CANCELLATION':
+            return 'bg-red-100 border-red-200';
+          case 'NEW_DOCUMENT':
+          case 'NEW_INVOICE':
+          case 'INVOICE_PAID':
+            return 'bg-green-100 border-green-200';
+          case 'INVOICE_OVERDUE':
+          case 'INACTIVITY_ALERT':
+            return 'bg-orange-100 border-orange-200';
+          default:
+            return 'bg-gray-100 border-gray-200';
+        }
     }
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" className="relative">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-              {unreadCount}
+    <div 
+      className={`p-4 mb-2 rounded-lg border ${getNotificationColor(notification.type, notification.severity)} ${
+        !notification.isRead ? 'border-l-4' : ''
+      }`}
+    >
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <NotificationIcon type={notification.type} />
+            <h4 className="font-semibold">{notification.title}</h4>
+          </div>
+          <p className="text-sm text-gray-600">{notification.message}</p>
+          <NotificationContent data={notification.data} />
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-gray-500">
+              {new Date(notification.createdAt).toLocaleString()}
             </span>
+            {notification.expiresAt && (
+              <span className="text-xs text-gray-500">
+                - Expire le {new Date(notification.expiresAt).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {!notification.isRead && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onMarkAsRead(notification.id)}
+              title="Marquer comme lu"
+            >
+              <Check className="h-4 w-4" />
+            </Button>
           )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80">
-        <h3 className="font-semibold mb-2">Notifications</h3>
-        <ScrollArea className="h-[400px]">
-          {notifications.length === 0 ? (
-            <p className="text-center text-muted-foreground">Aucune notification</p>
-          ) : (
-            <div className="space-y-2">
-              {notifications.map((notification) => (
-                <div
-                  key={notification._id}
-                  className={`p-3 rounded-lg ${
-                    notification.read ? 'bg-muted' : 'bg-primary/5'
-                  }`}
-                  onClick={() => !notification.read && markAsRead(notification._id)}
-                >
-                  <h4 className="font-medium">{notification.title}</h4>
-                  <p className="text-sm text-muted-foreground">{notification.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(notification.createdAt), 'dd MMMM yyyy à HH:mm', { locale: fr })}
-                  </p>
-                </div>
-              ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(notification.id)}
+            title="Supprimer"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Centre de notifications principal
+ */
+export const NotificationCenter: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+  const [notificationData, setNotificationData] = useState<NotificationResponse>({
+    notifications: [],
+    currentPage: 1,
+    totalPages: 1,
+    totalNotifications: 0
+  });
+  const [unreadNotifications, setUnreadNotifications] = useState<INotification[]>([]);
+  const { toast } = useToast();
+
+  const fetchNotifications = async (page: number = 1) => {
+    try {
+      setLoading(true);
+      const data = await notificationService.getAll(page);
+      setNotificationData(data);
+      const unread = await notificationService.getUnread();
+      setUnreadNotifications(unread);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les notifications",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id);
+      fetchNotifications(notificationData.currentPage);
+      toast({
+        description: "Notification marquée comme lue"
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de marquer la notification comme lue",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      fetchNotifications(notificationData.currentPage);
+      toast({
+        description: "Toutes les notifications ont été marquées comme lues"
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de marquer les notifications comme lues",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await notificationService.delete(id);
+      fetchNotifications(notificationData.currentPage);
+      toast({
+        description: "Notification supprimée"
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la notification",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteRead = async () => {
+    try {
+      const result = await notificationService.deleteReadNotifications();
+      fetchNotifications(notificationData.currentPage);
+      toast({
+        description: `${result.count} notifications lues supprimées`
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer les notifications lues",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= notificationData.totalPages) {
+      fetchNotifications(newPage);
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+            </CardTitle>
+            {unreadNotifications.length > 0 && (
+              <Badge variant="secondary">
+                {unreadNotifications.length} non lues
+              </Badge>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchNotifications(notificationData.currentPage)}
+              title="Rafraîchir"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMarkAllAsRead}
+              disabled={unreadNotifications.length === 0}
+              title="Tout marquer comme lu"
+            >
+              <CheckCheck className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDeleteRead}
+              title="Supprimer les notifications lues"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        <ScrollArea className="h-[500px] pr-4">
+          {loading ? (
+            Array(5).fill(0).map((_, i) => (
+              <div key={i} className="mb-4">
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ))
+          ) : notificationData.notifications.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Aucune notification
             </div>
+          ) : (
+            notificationData.notifications.map((notification) => (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onMarkAsRead={handleMarkAsRead}
+                onDelete={handleDelete}
+              />
+            ))
           )}
         </ScrollArea>
-      </PopoverContent>
-    </Popover>
+      </CardContent>
+
+      {notificationData.totalPages > 1 && (
+        <CardFooter className="flex justify-between items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(notificationData.currentPage - 1)}
+            disabled={notificationData.currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm">
+            Page {notificationData.currentPage} sur {notificationData.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(notificationData.currentPage + 1)}
+            disabled={notificationData.currentPage === notificationData.totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </CardFooter>
+      )}
+    </Card>
   );
 };

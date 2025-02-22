@@ -4,7 +4,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
 /**
  * Service pour la gestion des clients
  */
-export class ClientService {
+ class ClientService {
   private token: string;
 
   constructor() {
