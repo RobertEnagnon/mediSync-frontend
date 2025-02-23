@@ -5,6 +5,7 @@ export interface IClient {
   _id: string;
   firstName: string;
   lastName: string;
+  practitionerId?: string,
   email: string;
   phone: string;
   birthDate?: Date;

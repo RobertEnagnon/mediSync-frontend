@@ -92,53 +92,52 @@ const Appointments = () => {
 
 
   return (
-    <Layout>
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold">Rendez-vous</h1>
-          {/* Dialog pour ajouter un rendez-vous */}
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Nouveau rendez-vous
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nouveau rendez-vous</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddAppointment} className="space-y-4">
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-3xl font-bold">Rendez-vous</h1>
+        {/* Dialog pour ajouter un rendez-vous */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Nouveau rendez-vous
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nouveau rendez-vous</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddAppointment} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Titre</Label>
+                <Input id="title" name="title" placeholder="Title du rendez-vous" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="client">Client</Label>
+                <Select id="client" name="client" required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez un client" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {clients.map(client => (
+                      <SelectItem key={client._id} value={client._id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Titre</Label>
-                  <Input id="title" name="title" placeholder="Title du rendez-vous" />
+                  <Label htmlFor="date">Date</Label>
+                  <Input id="date" name="date" type="date" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="client">Client</Label>
-                  <Select id="client" name="client" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez un client" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {clients.map(client => (
-                        <SelectItem key={client._id} value={client._id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="time">Heure</Label>
+                  <Input id="time" name="time" type="time" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Input id="date" name="date" type="date" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="time">Heure</Label>
-                    <Input id="time" name="time" type="time" />
-                  </div>
-                </div>
-                {/* <div className="space-y-2">
+              </div>
+              {/* <div className="space-y-2">
                   <Label htmlFor="type">Type</Label>
                   <Select id="type" name="type" required >
                     <SelectTrigger>
@@ -150,61 +149,60 @@ const Appointments = () => {
                     </SelectContent>
                   </Select>
                 </div> */}
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Input id="notes" name="notes" placeholder="Notes additionnelles..." />
-                </div>
-                <Button type="submit" className="w-full">
-                  Créer le rendez-vous
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* Barre de recherche */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
-            <Input
-              placeholder="Rechercher un rendez-vous..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Button variant="outline">
-            <Filter className="w-4 h-4 mr-2" onClick={handleFilter} />
-            Filtrer
-          </Button>
-        </div>
-
-        <div className="grid gap-4">
-          {appointments.map((appointment) => (
-            <Card key={appointment.id} className="p-6">
-              <div className="flex flex-col sm:flex-row justify-between gap-4">
-                <div>
-                  <h3 className="font-medium">{appointment.title}</h3>
-                  <p className="text-sm text-gray-500">{appointment.client}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{appointment.time}</p>
-                    <p className="text-sm text-gray-500">{appointment.date}</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Modifier
-                  </Button>
-                  <Button variant="destructive" size="sm">
-                    Supprimer
-                  </Button>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Input id="notes" name="notes" placeholder="Notes additionnelles..." />
               </div>
-            </Card>
-          ))}
-        </div>
+              <Button type="submit" className="w-full">
+                Créer le rendez-vous
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
-    </Layout>
+
+      {/* Barre de recherche */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+          <Input
+            placeholder="Rechercher un rendez-vous..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button variant="outline">
+          <Filter className="w-4 h-4 mr-2" onClick={handleFilter} />
+          Filtrer
+        </Button>
+      </div>
+
+      <div className="grid gap-4">
+        {appointments.map((appointment) => (
+          <Card key={appointment.id} className="p-6">
+            <div className="flex flex-col sm:flex-row justify-between gap-4">
+              <div>
+                <h3 className="font-medium">{appointment.title}</h3>
+                <p className="text-sm text-gray-500">{appointment.client}</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-medium">{appointment.time}</p>
+                  <p className="text-sm text-gray-500">{appointment.date}</p>
+                </div>
+                <Button variant="outline" size="sm">
+                  Modifier
+                </Button>
+                <Button variant="destructive" size="sm">
+                  Supprimer
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 };
 

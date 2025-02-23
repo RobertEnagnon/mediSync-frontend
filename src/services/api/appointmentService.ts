@@ -1,12 +1,22 @@
-import { API_BASE_URL, headers, handleResponse, getAuthToken } from './config';
+import { API_BASE_URL,getAuthToken,handleResponse } from './config';
+
+export type AppointmentStatus = 'pending' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+export type AppointmentType = 'consultation' | 'follow-up' | 'emergency' | 'other';
 
 export interface IAppointment {
   _id: string;
   clientId: string;
+  practitionerId: string;
+  title?:string;
   date: Date;
   duration: number;
-  status: 'scheduled' | 'completed' | 'cancelled';
+  type: AppointmentType;
   notes?: string;
+  status: AppointmentStatus;
+  cancelledAt?: string;
+  cancellationReason?: string;
+  confirmedAt?: string;
+  completedAt?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,8 +31,8 @@ class AppointmentService {
   private getHeaders() {
     const token = getAuthToken();
     return {
-      ...headers,
-      Authorization: `Bearer ${token}`
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
     };
   }
 
@@ -148,11 +158,13 @@ class AppointmentService {
     status?: IAppointment['status'];
     date?: string;
     clientId?: string;
+    practitionerId?: string;
   }): Promise<IAppointment[]> {
     const params = new URLSearchParams();
     if (filters.status) params.append('status', filters.status);
     if (filters.date) params.append('date', filters.date);
     if (filters.clientId) params.append('clientId', filters.clientId);
+    if (filters.practitionerId) params.append('practitionerId', filters.practitionerId);
     
     const response = await fetch(`${API_BASE_URL}/appointments/filter?${params}`,{
       headers: this.getHeaders()

@@ -1,10 +1,10 @@
 import { IClient, CreateClientDto, UpdateClientDto, IClientStatistics } from '../../types/client';
-import { API_BASE_URL, headers, handleResponse } from './config';
+import { API_BASE_URL, headers, handleResponse, getAuthToken } from './config';
 
 /**
  * Service pour la gestion des clients
  */
- class ClientService {
+class ClientService {
   private token: string;
 
   constructor() {
@@ -15,7 +15,8 @@ import { API_BASE_URL, headers, handleResponse } from './config';
   private getHeaders() {
     return {
       ...headers,
-      Authorization: `Bearer ${this.token}`
+      Authorization: `Bearer ${this.token}`,
+      'Content-Type': 'application/json',
     };
   }
 
@@ -24,7 +25,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
    */
   async getAll(): Promise<IClient[]> {
     const response = await fetch(`${API_BASE_URL}/clients`, {
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
     });
     return handleResponse(response);
   }
@@ -34,7 +35,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
    */
   async getById(id: string): Promise<IClient> {
     const response = await fetch(`${API_BASE_URL}/clients/${id}`, {
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
     });
     return handleResponse(response);
   }
@@ -46,7 +47,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
     const response = await fetch(`${API_BASE_URL}/clients`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify(client)
+      body: JSON.stringify(client),
     });
     return handleResponse(response);
   }
@@ -58,7 +59,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
     const response = await fetch(`${API_BASE_URL}/clients/${id}`, {
       method: 'PUT',
       headers: this.getHeaders(),
-      body: JSON.stringify(client)
+      body: JSON.stringify(client),
     });
     return handleResponse(response);
   }
@@ -69,7 +70,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
   async delete(id: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/clients/${id}`, {
       method: 'DELETE',
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
     });
     return handleResponse(response);
   }
@@ -79,7 +80,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
    */
   async search(query: string): Promise<IClient[]> {
     const response = await fetch(`${API_BASE_URL}/clients/search?query=${encodeURIComponent(query)}`, {
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
     });
     return handleResponse(response);
   }
@@ -91,7 +92,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
     const response = await fetch(
       `${API_BASE_URL}/clients/date-range?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
       {
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
       }
     );
     return handleResponse(response);
@@ -104,7 +105,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
     const response = await fetch(
       `${API_BASE_URL}/clients/upcoming-birthdays?daysInAdvance=${daysInAdvance}`,
       {
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
       }
     );
     return handleResponse(response);
@@ -117,7 +118,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
     const response = await fetch(
       `${API_BASE_URL}/clients/inactive?inactiveDate=${inactiveDate.toISOString()}`,
       {
-        headers: this.getHeaders()
+        headers: this.getHeaders(),
       }
     );
     return handleResponse(response);
@@ -128,7 +129,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
    */
   async getStatistics(): Promise<IClientStatistics> {
     const response = await fetch(`${API_BASE_URL}/clients/statistics`, {
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
     });
     return handleResponse(response);
   }
@@ -139,7 +140,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
   async archive(id: string): Promise<IClient> {
     const response = await fetch(`${API_BASE_URL}/clients/${id}/archive`, {
       method: 'PUT',
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
     });
     return handleResponse(response);
   }
@@ -150,7 +151,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
   async unarchive(id: string): Promise<IClient> {
     const response = await fetch(`${API_BASE_URL}/clients/${id}/unarchive`, {
       method: 'PUT',
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
     });
     return handleResponse(response);
   }
@@ -162,7 +163,7 @@ import { API_BASE_URL, headers, handleResponse } from './config';
     const response = await fetch(`${API_BASE_URL}/clients/merge`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ sourceId, targetId })
+      body: JSON.stringify({ sourceId, targetId }),
     });
     return handleResponse(response);
   }
