@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"; // Importation du fou
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"; // Importation de la gestion des requêtes
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"; // Importation des composants de routage
 import { useAuth } from "@/hooks/useAuth"; // Importation du hook d'authentification
+import { Layout } from "@/components/Layout"; // Importation du composant de layout
 
 // Pages
 import Index from "./pages/Index"; // Importation de la page d'accueil
@@ -22,6 +23,7 @@ import ForgotPassword from "./pages/ForgotPassword"; // Importation de la page d
 import ResetPassword from "./pages/ResetPassword"; // Importation de la page de réinitialisation de mot de passe
 import VerifyEmail from "./pages/VerifyEmail"; // Importation de la page de vérification d'email
 import RegistrationSuccess from "./pages/RegistrationSuccess"; // Importation de la page de succès d'inscription
+import Invoices from "./pages/Invoices"; // Importation de la page des factures
 
 const queryClient = new QueryClient(); // Création d'une instance de QueryClient
 
@@ -31,7 +33,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!isAuthenticated) {
     return <Navigate to="/login" />; // Redirige vers la page de connexion si non authentifié
   }
-  return <>{children}</>; // Retourne les enfants si authentifié
+  return <Layout>{children}</Layout>; // Retourne les enfants si authentifié
 };
 
 // Déclaration du composant App
@@ -51,12 +53,13 @@ const App = () => (
           <Route path="/registration-success" element={<RegistrationSuccess />} /> {/* Route pour la page de succès d'inscription */}
 
           {/* Routes protégées */}
-          <Route path="/"  element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> {/* Route pour la page de tableau de bord */}
+          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} /> {/* Route pour la page de tableau de bord */}
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} /> {/* Route pour le calendrier */}
           <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} /> {/* Route pour les rendez-vous */}
           <Route path="/appointment-history" element={<ProtectedRoute><AppointmentHistory /></ProtectedRoute>} /> {/* Route pour l'historique des rendez-vous */}
           <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} /> {/* Route pour les clients */}
           <Route path="/clients/:id" element={<ProtectedRoute><ClientDetails /></ProtectedRoute>} /> {/* Route pour les détails d'un client */}
+          <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} /> {/* Route pour les factures */}
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} /> {/* Route pour le profil */}
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} /> {/* Route pour les paramètres */}
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} /> {/* Route pour les notifications */}

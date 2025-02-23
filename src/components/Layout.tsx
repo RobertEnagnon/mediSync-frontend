@@ -1,17 +1,21 @@
-import { SidebarProvider } from "@/components/ui/sidebar";
-import AppSidebar from "./AppSidebar";
+import React from 'react';
+import { AppSidebar } from './AppSidebar';
+
+interface LayoutProps {
+  children: React.ReactNode;
+}
 
 // Layout principal de l'application
-const Layout = ({ children }: { children: React.ReactNode }) => {
+export const Layout = ({ children }: LayoutProps) => {
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <AppSidebar />
-        <main className="flex-1 p-8 animate-fade-in">
+    <div className="flex min-h-screen">
+      <AppSidebar />
+      <main className="flex-1 overflow-y-auto bg-background">
+        <div className="container mx-auto p-6">
           {children}
-        </main>
-      </div>
-    </SidebarProvider>
+        </div>
+      </main>
+    </div>
   );
 };
 
