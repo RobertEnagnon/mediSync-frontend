@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { format, addMinutes } from 'date-fns';
+import { format, parseISO, addMinutes } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import {
   Calendar,
   Filter,
@@ -7,6 +8,7 @@ import {
   Search,
   Clock,
   User,
+  MapPin,
   Type as TypeIcon
 } from 'lucide-react';
 import {
@@ -14,12 +16,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -32,9 +33,11 @@ import { appointmentService } from '@/services/api/appointmentService';
 import { clientService } from '@/services/api/clientService';
 import { IClient } from '@/types/client';
 import { IAppointment, AppointmentType, AppointmentStatus } from '@/types/appointment';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import { Pagination } from '@/components/ui/pagination';
 import { useAuth } from '@/hooks/useAuth';
+import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 const DEFAULT_DURATION = 30;
@@ -46,15 +49,15 @@ const appointmentTypes: { value: AppointmentType; label: string }[] = [
   { value: 'other', label: 'Autre' }
 ];
 
-const appointmentStatuses: { value: AppointmentStatus; label: string }[] = [
-  { value: 'pending', label: 'En attente' },
-  { value: 'scheduled', label: 'Planifié' },
-  { value: 'confirmed', label: 'Confirmé' },
-  { value: 'completed', label: 'Terminé' },
-  { value: 'cancelled', label: 'Annulé' }
+const appointmentStatuses: { value: AppointmentStatus; label: string; color: string }[] = [
+  { value: 'pending', label: 'En attente', color: 'bg-blue-100 text-blue-800' },
+  { value: 'scheduled', label: 'Planifié', color: 'bg-purple-100 text-purple-800' },
+  { value: 'confirmed', label: 'Confirmé', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'completed', label: 'Terminé', color: 'bg-green-100 text-green-800' },
+  { value: 'cancelled', label: 'Annulé', color: 'bg-red-100 text-red-800' }
 ];
 
-const Appointments = () => {
+export default function Appointments() {
   const [appointments, setAppointments] = useState<IAppointment[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,9 +67,8 @@ const Appointments = () => {
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedType, setSelectedType] = useState<AppointmentType>('consultation');
   const [duration, setDuration] = useState(DEFAULT_DURATION);
-    const { user } = useAuth();
+  const { user } = useAuth();
 
-  // Fonction pour charger les données
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -74,13 +76,14 @@ const Appointments = () => {
         appointmentService.getAll(),
         clientService.getAll()
       ]);
-      setAppointments(appointmentsData);
-      setClients(clientsData);
+      setAppointments(appointmentsData || []);
+      setClients(clientsData || []);
     } catch (error: any) {
       console.error('Erreur lors du chargement des données:', error);
-      toast('Erreur lors du chargement des données', {
-        description: error.message,
-        duration: 3000,
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message || "Impossible de charger les données"
       });
     } finally {
       setLoading(false);
@@ -97,60 +100,76 @@ const Appointments = () => {
     const formData = new FormData(form);
 
     try {
-      // Vérification des champs requis
-      const clientId = selectedClient;
-      const date = formData.get('date') as string;
-
-      if (!date || !clientId) {
-        toast('Champs requis manquants', {
-          description: 'La date et le client sont requis',
-          duration: 3000,
+      if (!selectedClient || !user?.id) {
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: "Veuillez sélectionner un client"
         });
         return;
       }
 
-      // Création du rendez-vous
-      const newAppointment = await appointmentService.create({
+      const date = formData.get('date') as string;
+      if (!date) {
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: "La date est requise"
+        });
+        return;
+      }
+
+      const appointmentData = {
         title: (formData.get('title') as string) || 'Rendez-vous',
         description: formData.get('description') as string,
         date: new Date(date).toISOString(),
         duration,
-        clientId,
-        practitionerId: user?.id, // TODO: Utiliser l'ID du praticien connecté
+        clientId: selectedClient,
+        practitionerId: user.id,
         type: selectedType,
         notes: formData.get('notes') as string,
-        location: formData.get('location') as string
-      });
+        location: formData.get('location') as string,
+        status: 'pending' as AppointmentStatus
+      };
 
+      const newAppointment = await appointmentService.create(appointmentData);
       setAppointments(prev => [...prev, newAppointment]);
-      setDialogOpen(false);
-      toast('Rendez-vous créé', {
-        description: 'Le rendez-vous a été ajouté avec succès',
-        duration: 3000,
+      
+      toast({
+        title: "Succès",
+        description: "Le rendez-vous a été créé"
       });
-
-      // Reset form
-      setSelectedClient('');
-      setSelectedType('consultation');
-      setDuration(DEFAULT_DURATION);
+      
+      setDialogOpen(false);
+      resetForm();
     } catch (error: any) {
-      console.error('Erreur lors de l\'ajout du rendez-vous:', error);
-      toast('Erreur', {
-        description: error.message || 'Erreur lors de l\'ajout du rendez-vous',
-        duration: 3000,
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message || "Impossible de créer le rendez-vous"
       });
     }
   };
 
-  // Filtrer les rendez-vous
+  const resetForm = () => {
+    setSelectedClient('');
+    setSelectedType('consultation');
+    setDuration(DEFAULT_DURATION);
+  };
+
   const filteredAppointments = appointments.filter(appointment => {
-    const matchSearch = appointment.title.toLowerCase().includes(search.toLowerCase()) ||
-      clients.find(c => c._id === appointment.clientId)?.firstName.toLowerCase().includes(search.toLowerCase()) ||
-      clients.find(c => c._id === appointment.clientId)?.lastName.toLowerCase().includes(search.toLowerCase());
-    return matchSearch;
+    const client = clients.find(c => c._id === appointment.clientId);
+    const searchLower = search.toLowerCase();
+    
+    return (
+      appointment.title.toLowerCase().includes(searchLower) ||
+      appointment.description?.toLowerCase().includes(searchLower) ||
+      client?.firstName.toLowerCase().includes(searchLower) ||
+      client?.lastName.toLowerCase().includes(searchLower) ||
+      appointment.type.toLowerCase().includes(searchLower)
+    );
   });
 
-  // Pagination
   const paginatedAppointments = filteredAppointments.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
@@ -159,110 +178,21 @@ const Appointments = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900" />
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Rendez-vous</h1>
-
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Nouveau rendez-vous
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Ajouter un rendez-vous</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddAppointment} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Titre</Label>
-                <Input id="title" name="title" placeholder="Titre du rendez-vous" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" placeholder="Description du rendez-vous" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="clientId">Client</Label>
-                <Select value={selectedClient} onValueChange={setSelectedClient}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez un client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client._id} value={client._id}>
-                        {client.firstName} {client.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date et heure</Label>
-                  <Input id="date" name="date" type="datetime-local" required />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Durée (minutes)</Label>
-                  <Input
-                    id="duration"
-                    name="duration"
-                    type="number"
-                    min="15"
-                    step="15"
-                    value={duration}
-                    onChange={(e) => setDuration(parseInt(e.target.value))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" placeholder="Notes sur le rendez-vous" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location">Lieu</Label>
-                <Input id="location" name="location" placeholder="Lieu du rendez-vous" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <Select value={selectedType} onValueChange={(value: AppointmentType) => setSelectedType(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez un type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {appointmentTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button type="submit" className="w-full">
-                Créer le rendez-vous
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nouveau rendez-vous
+        </Button>
       </div>
 
-      {/* Barre de recherche */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
@@ -275,46 +205,168 @@ const Appointments = () => {
         </div>
       </div>
 
-      {/* Liste des rendez-vous */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouveau rendez-vous</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddAppointment} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="client">Client</Label>
+              <Select value={selectedClient} onValueChange={setSelectedClient}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client._id} value={client._id}>
+                      {client.firstName} {client.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="title">Titre</Label>
+              <Input id="title" name="title" placeholder="Titre du rendez-vous" required />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="date">Date et heure</Label>
+              <Input
+                id="date"
+                name="date"
+                type="datetime-local"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="duration">Durée (minutes)</Label>
+              <Input
+                id="duration"
+                type="number"
+                min="15"
+                step="15"
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value))}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" name="description" placeholder="Description du rendez-vous" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea id="notes" name="notes" placeholder="Notes sur le rendez-vous" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Lieu</Label>
+              <Input id="location" name="location" placeholder="Lieu du rendez-vous" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="type">Type</Label>
+              <Select value={selectedType} onValueChange={(value: AppointmentType) => setSelectedType(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {appointmentTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-4">
+              <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit">
+                Créer le rendez-vous
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid gap-4">
         {paginatedAppointments.length > 0 ? (
-          paginatedAppointments.map((appointment) => (
-            <Card key={appointment._id} className="p-6">
-              <div className="flex flex-col sm:flex-row justify-between gap-4">
-                <div>
-                  <h3 className="font-medium">{appointment.title}</h3>
-                  <p className="text-sm text-gray-500">
-                    Client: {clients.find(c => c._id === appointment.clientId)?.firstName} {clients.find(c => c._id === appointment.clientId)?.lastName}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {format(new Date(appointment.date), 'dd/MM/yyyy HH:mm')} - {format(addMinutes(new Date(appointment.date), appointment.duration), 'HH:mm')}
-                  </p>
-                  {appointment.location && (
-                    <p className="text-sm text-gray-500">
-                      Lieu: {appointment.location}
-                    </p>
-                  )}
-                  <p className="text-sm text-gray-500">
-                    Type: {appointmentTypes.find(t => t.value === appointment.type)?.label}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Statut: {appointmentStatuses.find(s => s.value === appointment.status)?.label}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    Modifier
-                  </Button>
-                  <Button variant="destructive" size="sm">
-                    Supprimer
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))
+          paginatedAppointments.map((appointment) => {
+            const client = clients.find(c => c._id === appointment.clientId._id);
+            const status = appointmentStatuses.find(s => s.value === appointment.status);
+            const type = appointmentTypes.find(t => t.value === appointment.type);
+            
+            return (
+              <Card key={appointment.id} className="group hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row justify-between gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">{appointment.title}</h3>
+                        <Badge variant="outline" className={status?.color}>
+                          {status?.label}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <User className="h-4 w-4" />
+                        <span>
+                          {client ? `${client.firstName} ${client.lastName}` : 'Client inconnu'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          {format(parseISO(appointment.date), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Clock className="h-4 w-4" />
+                        <span>{appointment.duration} minutes</span>
+                      </div>
+
+                      {appointment.location && (
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <MapPin className="h-4 w-4" />
+                          <span>{appointment.location}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <TypeIcon className="h-4 w-4" />
+                        <span>{type?.label}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <Button variant="outline" size="sm">
+                        Modifier
+                      </Button>
+                      <Button variant="destructive" size="sm">
+                        Annuler
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
         ) : (
-          <Card className="p-6 text-center text-gray-500">
-            <p>Aucun rendez-vous trouvé</p>
+          <Card className="p-6">
+            <CardContent className="text-center text-gray-500">
+              {search ? 'Aucun rendez-vous ne correspond à votre recherche' : 'Aucun rendez-vous'}
+            </CardContent>
           </Card>
         )}
       </div>
@@ -329,6 +381,4 @@ const Appointments = () => {
       )}
     </div>
   );
-};
-
-export default Appointments;
+}
