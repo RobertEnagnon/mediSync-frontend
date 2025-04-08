@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ButtonProps, buttonVariants } from "@/components/ui/button"
 
-const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
+const PaginationNav = ({ className, ...props }: React.ComponentProps<"nav">) => (
   <nav
     role="navigation"
     aria-label="pagination"
@@ -12,7 +12,7 @@ const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
     {...props}
   />
 )
-Pagination.displayName = "Pagination"
+PaginationNav.displayName = "PaginationNav"
 
 const PaginationContent = React.forwardRef<
   HTMLUListElement,
@@ -106,12 +106,57 @@ const PaginationEllipsis = ({
 )
 PaginationEllipsis.displayName = "PaginationEllipsis"
 
+interface PaginationProps {
+  currentPage: number;
+  totalItems: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
+}
+
+export function Pagination({
+  currentPage,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+}: PaginationProps) {
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  return (
+    <PaginationNav>
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            className={cn(currentPage <= 1 && "pointer-events-none opacity-50")}
+          />
+        </PaginationItem>
+        {[...Array(totalPages)].map((_, i) => (
+          <PaginationItem key={i + 1}>
+            <PaginationLink
+              onClick={() => onPageChange(i + 1)}
+              isActive={currentPage === i + 1}
+            >
+              {i + 1}
+            </PaginationLink>
+          </PaginationItem>
+        ))}
+        <PaginationItem>
+          <PaginationNext
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            className={cn(currentPage >= totalPages && "pointer-events-none opacity-50")}
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </PaginationNav>
+  )
+}
+
 export {
-  Pagination,
+  PaginationNav,
   PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
   PaginationLink,
-  PaginationNext,
+  PaginationItem,
   PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
 }

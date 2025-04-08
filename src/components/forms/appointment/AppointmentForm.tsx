@@ -3,7 +3,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { IAppointment } from '@/types/appointment';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { IAppointment, AppointmentType } from '@/types/appointment';
+import { toast } from 'sonner';
+
+const appointmentTypes: { value: AppointmentType; label: string }[] = [
+  { value: 'meeting', label: 'Réunion' },
+  { value: 'training', label: 'Formation' },
+  { value: 'holiday', label: 'Congé' },
+  { value: 'other', label: 'Autre' }
+];
 
 interface AppointmentFormProps {
   onSubmit: (data: Partial<IAppointment>) => void;
@@ -17,12 +26,37 @@ const AppointmentForm = ({ onSubmit, onCancel, initialData }: AppointmentFormPro
     description: '',
     startDate: '',
     endDate: '',
-    status: 'upcoming'
+    type: 'meeting',
+    location: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    // Validation des dates
+    if (!formData.startDate || !formData.endDate) {
+      toast.error('Les dates de début et de fin sont requises');
+      return;
+    }
+
+    const start = new Date(formData.startDate);
+    const end = new Date(formData.endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      toast.error('Dates invalides');
+      return;
+    }
+
+    if (start >= end) {
+      toast.error('La date de début doit être antérieure à la date de fin');
+      return;
+    }
+
+    onSubmit({
+      ...formData,
+      title: formData.title || 'Rendez-vous',
+      type: formData.type || 'meeting'
+    });
   };
 
   return (
@@ -68,6 +102,35 @@ const AppointmentForm = ({ onSubmit, onCancel, initialData }: AppointmentFormPro
             required
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location">Lieu</Label>
+        <Input
+          id="location"
+          value={formData.location}
+          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+          placeholder="Optionnel"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="type">Type</Label>
+        <Select
+          value={formData.type}
+          onValueChange={(value: AppointmentType) => setFormData({ ...formData, type: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Sélectionnez un type" />
+          </SelectTrigger>
+          <SelectContent>
+            {appointmentTypes.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex justify-end gap-2">

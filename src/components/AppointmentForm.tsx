@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { appointmentApiService } from "@/services/api/appointmentService";
+import { appointmentService } from "@/services/api/appointmentService";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import AppointmentBasicInfo from "./forms/appointment/AppointmentBasicInfo";
 import AppointmentClientSelect from "./forms/appointment/AppointmentClientSelect";
@@ -21,7 +21,7 @@ const AppointmentForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const queryClient = useQueryClient();
 
   const createAppointmentMutation = useMutation({
-    mutationFn: appointmentApiService.create,
+    mutationFn: appointmentService.create,
     onSuccess: () => {
       toast({
         title: "Rendez-vous créé",

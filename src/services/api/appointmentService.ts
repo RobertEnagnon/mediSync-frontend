@@ -1,27 +1,25 @@
-import { API_BASE_URL,getAuthToken,handleResponse } from './config';
+import { API_BASE_URL } from './config';
+import { getAuthToken } from './config';
+import { handleResponse } from './config';
 
-export type AppointmentStatus = 'pending' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-export type AppointmentType = 'consultation' | 'follow-up' | 'emergency' | 'other';
+export type AppointmentStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+export type AppointmentType = 'meeting' | 'training' | 'holiday' | 'other';
 
 export interface IAppointment {
   _id: string;
   title: string;
+  description?: string;
   clientId: string;
-  practitionerId: string;
-  date: Date;
-  duration: number;
+  startDate: string;
+  endDate: string;
+  location?: string;
   type: AppointmentType;
   status: AppointmentStatus;
-  notes?: string;
-  cancelledAt?: Date;
-  cancellationReason?: string;
-  confirmedAt?: Date;
-  completedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type CreateAppointmentDto = Omit<IAppointment, '_id' | 'createdAt' | 'updatedAt'>;
+export type CreateAppointmentDto = Omit<IAppointment, '_id' | 'createdAt' | 'updatedAt' | 'status'>;
 export type UpdateAppointmentDto = Partial<CreateAppointmentDto>;
 
 /**
@@ -43,7 +41,12 @@ class AppointmentService {
     const response = await fetch(`${API_BASE_URL}/appointments`, {
       headers: this.getHeaders()
     });
-    return handleResponse(response);
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des rendez-vous');
+    }
+
+    return response.json();
   }
 
   /**
@@ -53,7 +56,12 @@ class AppointmentService {
     const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
       headers: this.getHeaders()
     });
-    return handleResponse(response);
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération du rendez-vous');
+    }
+
+    return response.json();
   }
 
   /**
@@ -75,19 +83,30 @@ class AppointmentService {
       headers: this.getHeaders(),
       body: JSON.stringify(appointment)
     });
-    return handleResponse(response);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors de la création du rendez-vous');
+    }
+
+    return response.json();
   }
 
   /**
    * Met à jour un rendez-vous
    */
-  async update(id: string, appointment: UpdateAppointmentDto): Promise<IAppointment> {
+  async update(id: string, appointment: Partial<IAppointment>): Promise<IAppointment> {
     const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
       method: 'PUT',
       headers: this.getHeaders(),
       body: JSON.stringify(appointment)
     });
-    return handleResponse(response);
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la mise à jour du rendez-vous');
+    }
+
+    return response.json();
   }
 
   /**
@@ -98,7 +117,10 @@ class AppointmentService {
       method: 'DELETE',
       headers: this.getHeaders()
     });
-    return handleResponse(response);
+
+    if (!response.ok) {
+      throw new Error('Erreur lors de la suppression du rendez-vous');
+    }
   }
 
   /**
@@ -128,12 +150,7 @@ class AppointmentService {
    * Change le statut d'un rendez-vous
    */
   async updateStatus(id: string, status: IAppointment['status']): Promise<IAppointment> {
-    const response = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ status })
-    });
-    return handleResponse(response);
+    return this.update(id, { status });
   }
 
   /**
