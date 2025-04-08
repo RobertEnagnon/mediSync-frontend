@@ -15,7 +15,9 @@ import {
   LogOut,
   User,
   X,
-  Receipt
+  Receipt,
+  FileBox,
+  CalendarDays
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -60,6 +62,16 @@ const navItems: NavItem[] = [
     title: 'Clients',
     href: '/clients',
     icon: Users,
+  },
+  {
+    title: 'Documents',
+    href: '/documents',
+    icon: FileBox,
+  },
+  {
+    title: 'Événements',
+    href: '/events',
+    icon: CalendarDays,
   },
   {
     title: 'Factures',

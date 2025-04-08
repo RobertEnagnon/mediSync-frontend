@@ -24,6 +24,8 @@ import ResetPassword from "./pages/ResetPassword"; // Importation de la page de 
 import VerifyEmail from "./pages/VerifyEmail"; // Importation de la page de vérification d'email
 import RegistrationSuccess from "./pages/RegistrationSuccess"; // Importation de la page de succès d'inscription
 import Invoices from "./pages/Invoices"; // Importation de la page des factures
+import Documents from "./pages/Documents"; // Importation de la page des documents
+import Events from "./pages/Events"; // Importation de la page des événements
 
 const queryClient = new QueryClient(); // Création d'une instance de QueryClient
 
@@ -60,6 +62,8 @@ const App = () => (
           <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} /> {/* Route pour les clients */}
           <Route path="/clients/:id" element={<ProtectedRoute><ClientDetails /></ProtectedRoute>} /> {/* Route pour les détails d'un client */}
           <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} /> {/* Route pour les factures */}
+          <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} /> {/* Route pour les documents */}
+          <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} /> {/* Route pour les événements */}
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} /> {/* Route pour le profil */}
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} /> {/* Route pour les paramètres */}
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} /> {/* Route pour les notifications */}
