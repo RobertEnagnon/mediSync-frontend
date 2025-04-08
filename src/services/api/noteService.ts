@@ -1,4 +1,4 @@
-import { Note } from '@/types/note'; // Importer le type Note
+import { INote } from '@/types/note'; // Importer le type Note
 import { API_BASE_URL, headers, handleResponse } from './config'; // Importer les configurations
 
 export class NoteService  {
@@ -7,7 +7,7 @@ export class NoteService  {
  constructor() {
 }
   // Récupérer toutes les notes par ID de client
- async getNotesByClientId (clientId: string): Promise<Note[]>  {
+ async getNotesByClientId (clientId: string): Promise<INote[]>  {
     const response = await fetch(`${API_BASE_URL}/notes/${clientId}`, {
       headers: {
         ...headers,
@@ -18,7 +18,7 @@ export class NoteService  {
   }
 
   // Créer une nouvelle note
-  async createNote (note: Omit<Note, 'id'>): Promise<Note>{
+  async createNote (note: Omit<INote, 'id'>): Promise<INote>{
     const response = await fetch(`${API_BASE_URL}/notes`, {
       method: 'POST',
       headers: {
@@ -31,7 +31,7 @@ export class NoteService  {
   }
 
   // Mettre à jour une note
-  async updateNote (id: string, note: Partial<Note>): Promise<Note>{
+  async updateNote (id: string, note: Partial<INote>): Promise<INote>{
     const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
       method: 'PUT',
       headers: {

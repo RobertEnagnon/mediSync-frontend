@@ -27,7 +27,10 @@ class ClientService {
     const response = await fetch(`${API_BASE_URL}/clients`, {
       headers: this.getHeaders(),
     });
-    return handleResponse(response);
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des clients');
+    }
+    return response.json();
   }
 
   /**
@@ -37,7 +40,10 @@ class ClientService {
     const response = await fetch(`${API_BASE_URL}/clients/${id}`, {
       headers: this.getHeaders(),
     });
-    return handleResponse(response);
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération du client');
+    }
+    return response.json();
   }
 
   /**
@@ -49,7 +55,10 @@ class ClientService {
       headers: this.getHeaders(),
       body: JSON.stringify(client),
     });
-    return handleResponse(response);
+    if (!response.ok) {
+      throw new Error('Erreur lors de la création du client');
+    }
+    return response.json();
   }
 
   /**
@@ -61,7 +70,10 @@ class ClientService {
       headers: this.getHeaders(),
       body: JSON.stringify(client),
     });
-    return handleResponse(response);
+    if (!response.ok) {
+      throw new Error('Erreur lors de la mise à jour du client');
+    }
+    return response.json();
   }
 
   /**
@@ -72,7 +84,9 @@ class ClientService {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
-    return handleResponse(response);
+    if (!response.ok) {
+      throw new Error('Erreur lors de la suppression du client');
+    }
   }
 
   /**
@@ -108,7 +122,10 @@ class ClientService {
         headers: this.getHeaders(),
       }
     );
-    return handleResponse(response);
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des anniversaires à venir');
+    }
+    return response.json();
   }
 
   /**
@@ -131,7 +148,10 @@ class ClientService {
     const response = await fetch(`${API_BASE_URL}/clients/statistics`, {
       headers: this.getHeaders(),
     });
-    return handleResponse(response);
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des statistiques');
+    }
+    return response.json();
   }
 
   /**

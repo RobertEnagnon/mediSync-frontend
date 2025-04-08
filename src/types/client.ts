@@ -5,24 +5,22 @@ export interface IClient {
   _id: string;
   firstName: string;
   lastName: string;
-  practitionerId?: string,
   email: string;
   phone: string;
-  birthDate?: Date;
+  birthDate?: string;
   address?: string;
   notes?: string;
-  createdAt: Date;
-  lastVisit?: Date;
-  isArchived?: boolean;
-  archivedAt?: Date;
-  // Champ virtuel généré par le backend
-  name?: string;
+  isArchived: boolean;
+  practitionerId: string;
+  createdAt: string;
+  updatedAt: string;
+  lastVisit?: string;
 }
 
 /**
  * Type pour la création d'un nouveau client
  */
-export type CreateClientDto = Omit<IClient, '_id' | 'createdAt' | 'lastVisit' | 'isArchived' | 'archivedAt'>;
+export type CreateClientDto = Omit<IClient, '_id' | 'createdAt' | 'updatedAt' | 'practitionerId'>;
 
 /**
  * Type pour la mise à jour d'un client
@@ -34,8 +32,24 @@ export type UpdateClientDto = Partial<CreateClientDto>;
  */
 export interface IClientStatistics {
   total: number;
-  active: number;
-  inactive: number;
   newThisMonth: number;
-  averageVisitsPerMonth: number;
+  birthdays: number;
+  appointments: {
+    upcoming: number;
+    total: number;
+  };
+}
+
+/**
+ * Interface pour les filtres des clients
+ */
+export interface IClientFilters {
+  search?: string;
+  isArchived?: boolean;
+  hasUpcomingAppointments?: boolean;
+  hasBirthday?: boolean;
+  sortBy?: 'name' | 'createdAt' | 'lastVisit';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
 }

@@ -2,17 +2,17 @@ import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
   FormControl,
@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { IClient, CreateClientDto } from '../../../types/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ClientFormProps {
   initialData?: Partial<IClient>;
@@ -48,6 +49,12 @@ export const ClientForm: React.FC<ClientFormProps> = ({
       notes: initialData.notes || ''
     }
   });
+
+  const [calendarYear, setCalendarYear] = React.useState<number>(
+    form.getValues('birthDate')?.getFullYear() || new Date().getFullYear()
+  );
+
+  const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
 
   return (
     <Form {...form}>
@@ -136,28 +143,56 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                       variant="outline"
                       className={`w-full pl-3 text-left font-normal ${!field.value && 'text-muted-foreground'}`}
                     >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
                       {field.value ? (
-                        format(field.value, 'P', { locale: fr })
+                        format(field.value, 'dd MMMM yyyy', { locale: fr })
                       ) : (
                         <span>Sélectionner une date</span>
                       )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
+                  <div className="flex items-center gap-2 p-3 border-b">
+                    <Select
+                      value={calendarYear.toString()}
+                      onValueChange={(value) => setCalendarYear(parseInt(value))}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Année" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {years.map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Calendar
                     mode="single"
                     selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) =>
-                      date > new Date() || date < new Date('1900-01-01')
-                    }
+                    onSelect={(date) => field.onChange(date)}
+                    defaultMonth={new Date(calendarYear, 0)}
+                    fromYear={calendarYear}
+                    toYear={calendarYear}
+                    captionLayout="buttons"
+                    locale={fr}
+                    disabled={(date) => date > new Date()}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
-              <FormMessage />
+              {field.value && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => field.onChange(undefined)}
+                >
+                  Effacer
+                </Button>
+              )}
             </FormItem>
           )}
         />

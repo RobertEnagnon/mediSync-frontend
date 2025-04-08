@@ -57,6 +57,16 @@ class AppointmentService {
   }
 
   /**
+   * Récupère les rendez-vous d'un client
+   */
+  async getByClientId(clientId: string): Promise<IAppointment[]> {
+    const response = await fetch(`${API_BASE_URL}/appointments/client/${clientId}`, {
+      headers: this.getHeaders()
+    });
+    return handleResponse(response);
+  }
+
+  /**
    * Crée un nouveau rendez-vous
    */
   async create(appointment: CreateAppointmentDto): Promise<IAppointment> {
