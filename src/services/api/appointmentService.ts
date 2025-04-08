@@ -5,18 +5,18 @@ export type AppointmentType = 'consultation' | 'follow-up' | 'emergency' | 'othe
 
 export interface IAppointment {
   _id: string;
+  title: string;
   clientId: string;
   practitionerId: string;
-  title?:string;
   date: Date;
   duration: number;
   type: AppointmentType;
-  notes?: string;
   status: AppointmentStatus;
-  cancelledAt?: string;
+  notes?: string;
+  cancelledAt?: Date;
   cancellationReason?: string;
-  confirmedAt?: string;
-  completedAt?: string;
+  confirmedAt?: Date;
+  completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

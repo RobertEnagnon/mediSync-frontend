@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label"; // Importation du composant Label
 import { Card } from "@/components/ui/card"; // Importation du composant Card
 import { useAuth } from "@/hooks/useAuth"; // Importation du hook d'authentification
 import { Link } from "react-router-dom"; // Importation de Link pour la navigation
+import { Eye, EyeOff } from 'lucide-react';
 
 // Déclaration du composant Login
 const Login = () => {
   const [email, setEmail] = useState(""); // État pour l'email
   const [password, setPassword] = useState(""); // État pour le mot de passe
   const [isLoading, setIsLoading] = useState(false); // État pour gérer le chargement
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate(); // Hook pour la navigation
   const { toast } = useToast(); // Hook pour afficher des notifications
   const { login } = useAuth(); // Fonction de connexion du hook d'authentification
@@ -64,15 +66,28 @@ const Login = () => {
           </div>
           <div>
             <Label htmlFor="password">Mot de passe</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)} // Met à jour l'état lors du changement
-              required
-              className="mt-1"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} // Met à jour l'état lors du changement
+                required
+                className="mt-1"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-500" />
+                )}
+              </button>
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">

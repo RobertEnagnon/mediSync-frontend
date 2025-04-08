@@ -86,6 +86,8 @@ export const AppSidebar = () => {
 
   const handleLogout = async () => {
     await logout();
+    localStorage.removeItem("auth-storage")
+    localStorage.removeItem("token")
     navigate('/login');
   };
 

@@ -104,7 +104,7 @@ const Clients = () => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   if (loading) return <div>Chargement...</div>;
-  if (error) return <div>Erreur: {error}</div>;
+  // if (error) return <div>Erreur: {error}</div>;
 
   return (
     <div className="space-y-8">

@@ -89,7 +89,7 @@ const ClientDetails = () => {
   // if (error) return <div>Error: {error}</div>; // Afficher un message d'erreur
 
   return (
-    <Layout>
+    // <Layout>
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold">Détails du client</h1>
@@ -239,7 +239,7 @@ const ClientDetails = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </Layout>
+    // </Layout>
   );
 };
 
