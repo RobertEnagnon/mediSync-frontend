@@ -9,19 +9,35 @@ import {
   Clock,
   User,
   MapPin,
-  Type as TypeIcon
+  Type as TypeIcon,
+  AlertTriangle
 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  Button
+} from '@/components/ui/button';
+import {
+  Input
+} from '@/components/ui/input';
+import {
+  Label
+} from '@/components/ui/label';
+import {
+  Card, 
+  CardHeader, 
+  CardContent, 
+  CardTitle 
+} from '@/components/ui/card';
+import {
+  Textarea
+} from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -29,15 +45,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { appointmentService } from '@/services/api/appointmentService';
-import { clientService } from '@/services/api/clientService';
-import { IClient } from '@/types/client';
-import { IAppointment, AppointmentType, AppointmentStatus } from '@/types/appointment';
-import { toast } from '@/components/ui/use-toast';
-import { Pagination } from '@/components/ui/pagination';
-import { useAuth } from '@/hooks/useAuth';
-import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import {
+  appointmentService
+} from '@/services/api/appointmentService';
+import {
+  clientService
+} from '@/services/api/clientService';
+import {
+  IClient
+} from '@/types/client';
+import {
+  IAppointment, 
+  AppointmentType, 
+  AppointmentStatus
+} from '@/types/appointment';
+import {
+  toast
+} from '@/components/ui/use-toast';
+import {
+  Pagination
+} from '@/components/ui/pagination';
+import {
+  useAuth
+} from '@/hooks/useAuth';
+import {
+  Badge
+} from '@/components/ui/badge';
+import {
+  Loader2
+} from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 const DEFAULT_DURATION = 30;
@@ -62,6 +98,9 @@ export default function Appointments() {
   const [clients, setClients] = useState<IClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<IAppointment | null>(null);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedClient, setSelectedClient] = useState<string>('');
@@ -151,10 +190,104 @@ export default function Appointments() {
     }
   };
 
+  const handleEditAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAppointment) return;
+
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    try {
+      if (!selectedClient || !user?.id) {
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: "Veuillez sélectionner un client"
+        });
+        return;
+      }
+
+      const date = formData.get('date') as string;
+      if (!date) {
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: "La date est requise"
+        });
+        return;
+      }
+
+      const appointmentData = {
+        title: (formData.get('title') as string) || 'Rendez-vous',
+        description: formData.get('description') as string,
+        date: new Date(date).toISOString(),
+        duration,
+        clientId: selectedClient,
+        practitionerId: user.id,
+        type: selectedType,
+        notes: formData.get('notes') as string,
+        location: formData.get('location') as string,
+        status: selectedAppointment.status
+      };
+
+      const updatedAppointment = await appointmentService.update(selectedAppointment.id, appointmentData);
+      setAppointments(prev => prev.map(app => app.id === selectedAppointment.id ? updatedAppointment : app));
+      
+      toast({
+        title: "Succès",
+        description: "Le rendez-vous a été modifié"
+      });
+      
+      setEditDialogOpen(false);
+      resetForm();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message || "Impossible de modifier le rendez-vous"
+      });
+    }
+  };
+
+  const handleDeleteAppointment = async () => {
+    if (!selectedAppointment) return;
+
+    try {
+      await appointmentService.delete(selectedAppointment.id);
+      setAppointments(prev => prev.filter(app => app.id !== selectedAppointment.id));
+      
+      toast({
+        title: "Succès",
+        description: "Le rendez-vous a été supprimé"
+      });
+      
+      setDeleteDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer le rendez-vous"
+      });
+    }
+  };
+
   const resetForm = () => {
     setSelectedClient('');
     setSelectedType('consultation');
     setDuration(DEFAULT_DURATION);
+  };
+
+  const openEditDialog = (appointment: IAppointment) => {
+    setSelectedAppointment(appointment);
+    setSelectedClient(appointment.clientId._id);
+    setSelectedType(appointment.type);
+    setDuration(appointment.duration);
+    setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (appointment: IAppointment) => {
+    setSelectedAppointment(appointment);
+    setDeleteDialogOpen(true);
   };
 
   const filteredAppointments = appointments.filter(appointment => {
@@ -206,53 +339,76 @@ export default function Appointments() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nouveau rendez-vous</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAddAppointment} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="client">Client</Label>
-              <Select value={selectedClient} onValueChange={setSelectedClient}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client._id} value={client._id}>
-                      {client.firstName} {client.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="client">Client</Label>
+                <Select value={selectedClient} onValueChange={setSelectedClient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client._id} value={client._id}>
+                        {client.firstName} {client.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="title">Titre</Label>
-              <Input id="title" name="title" placeholder="Titre du rendez-vous" required />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="title">Titre</Label>
+                <Input id="title" name="title" placeholder="Titre du rendez-vous" required />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="date">Date et heure</Label>
-              <Input
-                id="date"
-                name="date"
-                type="datetime-local"
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="date">Date et heure</Label>
+                <Input
+                  id="date"
+                  name="date"
+                  type="datetime-local"
+                  required
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="duration">Durée (minutes)</Label>
-              <Input
-                id="duration"
-                type="number"
-                min="15"
-                step="15"
-                value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value))}
-                required
-              />
+              <div className="space-y-2">
+                <Label htmlFor="duration">Durée (minutes)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  min="15"
+                  step="15"
+                  value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value))}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type">Type</Label>
+                <Select value={selectedType} onValueChange={(value: AppointmentType) => setSelectedType(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {appointmentTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">Lieu</Label>
+                <Input id="location" name="location" placeholder="Lieu du rendez-vous" />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -265,28 +421,7 @@ export default function Appointments() {
               <Textarea id="notes" name="notes" placeholder="Notes sur le rendez-vous" />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="location">Lieu</Label>
-              <Input id="location" name="location" placeholder="Lieu du rendez-vous" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
-              <Select value={selectedType} onValueChange={(value: AppointmentType) => setSelectedType(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {appointmentTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex justify-end gap-4">
+            <div className="flex justify-end gap-4 sticky bottom-0 bg-white p-4 border-t">
               <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
                 Annuler
               </Button>
@@ -295,6 +430,145 @@ export default function Appointments() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier le rendez-vous</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditAppointment} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="client">Client</Label>
+                <Select value={selectedClient} onValueChange={setSelectedClient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client._id} value={client._id}>
+                        {client.firstName} {client.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="title">Titre</Label>
+                <Input 
+                  id="title" 
+                  name="title" 
+                  placeholder="Titre du rendez-vous" 
+                  defaultValue={selectedAppointment?.title}
+                  required 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="date">Date et heure</Label>
+                <Input
+                  id="date"
+                  name="date"
+                  type="datetime-local"
+                  defaultValue={selectedAppointment ? format(parseISO(selectedAppointment.date), "yyyy-MM-dd'T'HH:mm") : undefined}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="duration">Durée (minutes)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  min="15"
+                  step="15"
+                  value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value))}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type">Type</Label>
+                <Select value={selectedType} onValueChange={(value: AppointmentType) => setSelectedType(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {appointmentTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">Lieu</Label>
+                <Input 
+                  id="location" 
+                  name="location" 
+                  placeholder="Lieu du rendez-vous"
+                  defaultValue={selectedAppointment?.location}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea 
+                id="description" 
+                name="description" 
+                placeholder="Description du rendez-vous"
+                defaultValue={selectedAppointment?.description}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea 
+                id="notes" 
+                name="notes" 
+                placeholder="Notes sur le rendez-vous"
+                defaultValue={selectedAppointment?.notes}
+              />
+            </div>
+
+            <div className="flex justify-end gap-4 sticky bottom-0 bg-white p-4 border-t">
+              <Button variant="outline" type="button" onClick={() => setEditDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit">
+                Modifier le rendez-vous
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer le rendez-vous</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce rendez-vous ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-4">
+            <AlertTriangle className="h-12 w-12 text-red-500" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAppointment}>
+              Supprimer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -350,11 +624,11 @@ export default function Appointments() {
                     </div>
 
                     <div className="flex items-start gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(appointment)}>
                         Modifier
                       </Button>
-                      <Button variant="destructive" size="sm">
-                        Annuler
+                      <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(appointment)}>
+                        Supprimer
                       </Button>
                     </div>
                   </div>
