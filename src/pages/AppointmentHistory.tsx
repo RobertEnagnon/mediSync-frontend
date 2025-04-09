@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Table,
@@ -19,23 +19,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
-
-interface Appointment {
-  id: string;
-  patientName: string;
-  date: string;
-  time: string;
-  status: "completed" | "cancelled" | "no-show";
-  type: string;
-  notes?: string;
-}
+import { Loader2 } from "lucide-react";
+import { appointmentService } from "@/services/api/appointmentService";
+import { IAppointment, AppointmentStatus } from "@/types/appointment";
 
 const AppointmentHistory = () => {
-  const { toast } = useToast();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<IAppointment[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<IAppointment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({
     status: "all",
     search: "",
@@ -52,16 +45,18 @@ const AppointmentHistory = () => {
 
   const fetchAppointments = async () => {
     try {
-      const response = await fetch("/api/appointments/history");
-      const data = await response.json();
+      setLoading(true);
+      const data = await appointmentService.getHistory();
       setAppointments(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors du chargement de l'historique:", error);
       toast({
         title: "Erreur",
         description: "Impossible de charger l'historique des rendez-vous",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,7 +73,9 @@ const AppointmentHistory = () => {
       const searchLower = filter.search.toLowerCase();
       filtered = filtered.filter(
         (apt) =>
-          apt.patientName.toLowerCase().includes(searchLower) ||
+          apt.title.toLowerCase().includes(searchLower) ||
+          apt.clientId.firstName.toLowerCase().includes(searchLower) ||
+          apt.clientId.lastName.toLowerCase().includes(searchLower) ||
           apt.type.toLowerCase().includes(searchLower)
       );
     }
@@ -109,28 +106,32 @@ const AppointmentHistory = () => {
     setFilteredAppointments(filtered);
   };
 
-  const getStatusBadge = (status: Appointment["status"]) => {
-    switch (status) {
-      case "completed":
-        return <Badge variant="default">Terminé</Badge>;
-      case "cancelled":
-        return <Badge variant="destructive">Annulé</Badge>;
-      case "no-show":
-        return <Badge variant="secondary">Non présenté</Badge>;
-      default:
-        return null;
-    }
+  const getStatusBadge = (status: AppointmentStatus) => {
+    const statusConfig = {
+      pending: { label: "En attente", color: "bg-blue-100 text-blue-800" },
+      scheduled: { label: "Planifié", color: "bg-purple-100 text-purple-800" },
+      confirmed: { label: "Confirmé", color: "bg-yellow-100 text-yellow-800" },
+      completed: { label: "Terminé", color: "bg-green-100 text-green-800" },
+      cancelled: { label: "Annulé", color: "bg-red-100 text-red-800" },
+    };
+
+    const config = statusConfig[status];
+    return (
+      <Badge variant="outline" className={config.color}>
+        {config.label}
+      </Badge>
+    );
   };
 
   const exportToCSV = () => {
-    const headers = ["Date", "Heure", "Patient", "Type", "Statut", "Notes"];
+    const headers = ["Date", "Heure", "Client", "Type", "Statut", "Notes"];
     const csvContent = [
       headers.join(","),
       ...filteredAppointments.map((apt) =>
         [
-          apt.date,
-          apt.time,
-          apt.patientName,
+          format(parseISO(apt.date), "dd/MM/yyyy"),
+          format(parseISO(apt.date), "HH:mm"),
+          `${apt.clientId.firstName} ${apt.clientId.lastName}`,
           apt.type,
           apt.status,
           apt.notes || "",
@@ -150,6 +151,14 @@ const AppointmentHistory = () => {
     document.body.removeChild(link);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8">
       <Card>
@@ -161,7 +170,7 @@ const AppointmentHistory = () => {
           <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
               <Input
-                placeholder="Rechercher un patient ou un type..."
+                placeholder="Rechercher un client ou un type..."
                 value={filter.search}
                 onChange={(e) =>
                   setFilter((prev) => ({ ...prev, search: e.target.value }))
@@ -182,7 +191,9 @@ const AppointmentHistory = () => {
                   <SelectItem value="all">Tous les statuts</SelectItem>
                   <SelectItem value="completed">Terminé</SelectItem>
                   <SelectItem value="cancelled">Annulé</SelectItem>
-                  <SelectItem value="no-show">Non présenté</SelectItem>
+                  <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="scheduled">Planifié</SelectItem>
+                  <SelectItem value="confirmed">Confirmé</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -212,27 +223,39 @@ const AppointmentHistory = () => {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Heure</TableHead>
-                  <TableHead>Patient</TableHead>
+                  <TableHead>Client</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Notes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAppointments.map((appointment) => (
-                  <TableRow key={appointment.id}>
-                    <TableCell>
-                      {format(new Date(appointment.date), "dd MMMM yyyy", {
-                        locale: fr,
-                      })}
+                {filteredAppointments.length > 0 ? (
+                  filteredAppointments.map((appointment) => (
+                    <TableRow key={appointment.id}>
+                      <TableCell>
+                        {format(parseISO(appointment.date), "dd MMMM yyyy", {
+                          locale: fr,
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        {format(parseISO(appointment.date), "HH:mm")}
+                      </TableCell>
+                      <TableCell>
+                        {`${appointment.clientId.firstName} ${appointment.clientId.lastName}`}
+                      </TableCell>
+                      <TableCell>{appointment.type}</TableCell>
+                      <TableCell>{getStatusBadge(appointment.status)}</TableCell>
+                      <TableCell>{appointment.notes}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      Aucun rendez-vous trouvé
                     </TableCell>
-                    <TableCell>{appointment.time}</TableCell>
-                    <TableCell>{appointment.patientName}</TableCell>
-                    <TableCell>{appointment.type}</TableCell>
-                    <TableCell>{getStatusBadge(appointment.status)}</TableCell>
-                    <TableCell>{appointment.notes}</TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
