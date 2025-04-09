@@ -13,85 +13,165 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { EventService } from '@/services/api/eventService';
-import { Calendar as CalendarIcon, Clock, Plus, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Plus, Search, MapPin, Users, RepeatIcon, BellIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/ui/pagination';
+import { Event, EventType, EventStatus, RecurrenceFrequency } from '@/types/event';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DatePicker } from '@/components/ui/date-picker';
+import { TimeInput } from '@/components/ui/time-input';
 
 const ITEMS_PER_PAGE = 10;
 
-interface IEvent {
-  _id: string;
-  title: string;
-  description: string;
-  startDate: Date;
-  endDate: Date;
-  location?: string;
-  type: 'meeting' | 'training' | 'holiday' | 'other';
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 const eventTypes = [
+  { value: 'appointment', label: 'Rendez-vous' },
   { value: 'meeting', label: 'Réunion' },
-  { value: 'training', label: 'Formation' },
+  { value: 'break', label: 'Pause' },
   { value: 'holiday', label: 'Congé' },
   { value: 'other', label: 'Autre' }
 ];
 
+const eventStatuses = [
+  { value: 'scheduled', label: 'Planifié' },
+  { value: 'ongoing', label: 'En cours' },
+  { value: 'completed', label: 'Terminé' },
+  { value: 'cancelled', label: 'Annulé' }
+];
+
+const recurrenceFrequencies = [
+  { value: 'daily', label: 'Quotidien' },
+  { value: 'weekly', label: 'Hebdomadaire' },
+  { value: 'monthly', label: 'Mensuel' },
+  { value: 'yearly', label: 'Annuel' }
+];
+
+const weekDays = [
+  { value: '0', label: 'Dimanche' },
+  { value: '1', label: 'Lundi' },
+  { value: '2', label: 'Mardi' },
+  { value: '3', label: 'Mercredi' },
+  { value: '4', label: 'Jeudi' },
+  { value: '5', label: 'Vendredi' },
+  { value: '6', label: 'Samedi' }
+];
+
 const Events = () => {
-  const [events, setEvents] = useState<IEvent[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [newEvent, setNewEvent] = useState<Partial<IEvent>>({
+  const [activeTab, setActiveTab] = useState('all');
+  const [dateRange, setDateRange] = useState<{ startDate: Date; endDate: Date }>({
+    startDate: new Date(),
+    endDate: new Date()
+  });
+  const [filters, setFilters] = useState({
+    type: '',
+    status: ''
+  });
+
+  const [newEvent, setNewEvent] = useState<Partial<Event>>({
     title: '',
     description: '',
-    type: 'meeting',
-    status: 'upcoming'
+    type: 'appointment',
+    status: 'scheduled',
+    date: new Date(),
+    startTime: '09:00',
+    endTime: '10:00',
+    duration: 60,
+    color: '#4F46E5',
+    isRecurring: false,
+    recurrencePattern: {
+      frequency: 'daily',
+      interval: 1,
+      endDate: new Date(),
+      daysOfWeek: []
+    },
+    reminder: {
+      enabled: false,
+      timing: 30
+    }
   });
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const data = await EventService.getAll();
-        setEvents(data);
-      } catch (err: any) {
-        toast({
-          title: 'Erreur',
-          description: err.message,
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchEvents();
-  }, []);
+  // Fonction pour charger les événements selon le tab actif
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      let data: Event[];
 
+      switch (activeTab) {
+        case 'today':
+          data = await EventService.getTodayEvents();
+          break;
+        case 'upcoming':
+          data = await EventService.getUpcoming(7);
+          break;
+        case 'date-range':
+          data = await EventService.getByDateRange(dateRange.startDate, dateRange.endDate);
+          break;
+        default:
+          data = await EventService.getAll();
+      }
+
+      setEvents(data);
+    } catch (err: any) {
+      toast({
+        title: 'Erreur',
+        description: err.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEvents();
+  }, [activeTab, dateRange]);
+
+  // Fonction pour créer un événement
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const eventData = {
-        ...newEvent,
-        startDate: new Date(newEvent.startDate!),
-        endDate: new Date(newEvent.endDate!)
-      };
-      await EventService.create(eventData);
+      if (newEvent.isRecurring && newEvent.recurrencePattern) {
+        await EventService.createRecurring(newEvent as Omit<Event, 'id'>, newEvent.recurrencePattern);
+      } else {
+        const { recurrencePattern, ...eventData } = newEvent;
+        await EventService.create(eventData as Omit<Event, 'id'>);
+      }
+      
       toast({
         title: 'Succès',
-        description: 'Événement ajouté avec succès'
+        description: 'Événement créé avec succès',
       });
       setDialogOpen(false);
-      
-      // Rafraîchir la liste des événements
-      const updatedEvents = await EventService.getAll();
-      setEvents(updatedEvents);
+      loadEvents();
+    } catch (error) {
+      console.error('Erreur lors de la création de l\'événement:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Erreur lors de la création de l\'événement',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Fonction pour mettre à jour le statut d'un événement
+  const handleStatusUpdate = async (id: string, status: EventStatus) => {
+    try {
+      await EventService.updateStatus(id, status);
+      toast({
+        title: 'Succès',
+        description: 'Statut mis à jour avec succès'
+      });
+      loadEvents();
     } catch (err: any) {
       toast({
         title: 'Erreur',
@@ -101,6 +181,7 @@ const Events = () => {
     }
   };
 
+  // Fonction pour supprimer un événement
   const handleDelete = async (id: string) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
       return;
@@ -112,10 +193,7 @@ const Events = () => {
         title: 'Succès',
         description: 'Événement supprimé avec succès'
       });
-      
-      // Rafraîchir la liste des événements
-      const updatedEvents = await EventService.getAll();
-      setEvents(updatedEvents);
+      loadEvents();
     } catch (err: any) {
       toast({
         title: 'Erreur',
@@ -125,28 +203,44 @@ const Events = () => {
     }
   };
 
-  // Filtrer les événements en fonction de la recherche
-  const filteredEvents = events.filter(event =>
-    event.title.toLowerCase().includes(search.toLowerCase()) ||
-    event.description.toLowerCase().includes(search.toLowerCase()) ||
-    event.type.toLowerCase().includes(search.toLowerCase()) ||
-    (event.location && event.location.toLowerCase().includes(search.toLowerCase()))
+  // Fonction pour rechercher des événements
+  const handleSearch = async () => {
+    try {
+      setLoading(true);
+      const data = await EventService.search(search, {
+        type: filters.type,
+        status: filters.status
+      });
+      setEvents(data);
+    } catch (err: any) {
+      toast({
+        title: 'Erreur',
+        description: err.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (search || filters.type || filters.status) {
+      handleSearch();
+    } else {
+      loadEvents();
+    }
+  }, [search, filters]);
+
+  // Filtrer les événements pour la pagination
+  const filteredEvents = events?.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   );
 
-  // Pagination
-  const indexOfLastEvent = currentPage * ITEMS_PER_PAGE;
-  const indexOfFirstEvent = indexOfLastEvent - ITEMS_PER_PAGE;
-  const currentEvents = filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent);
-
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Chargement...</div>;
-  }
-
   return (
-    <div className="space-y-8">
-      {/* En-tête */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Événements</h1>
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Gestion des événements</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -154,9 +248,9 @@ const Events = () => {
               Nouvel événement
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nouvel événement</DialogTitle>
+              <DialogTitle>Créer un nouvel événement</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAddEvent} className="space-y-4">
               <div className="space-y-2">
@@ -164,7 +258,9 @@ const Events = () => {
                 <Input
                   id="title"
                   value={newEvent.title}
-                  onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, title: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -173,121 +269,352 @@ const Events = () => {
                 <Textarea
                   id="description"
                   value={newEvent.description}
-                  onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                  required
+                  onChange={(e) =>
+                    setNewEvent({ ...newEvent, description: e.target.value })
+                  }
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Date de début</Label>
-                  <Input
-                    id="startDate"
-                    type="datetime-local"
-                    value={newEvent.startDate}
-                    onChange={(e) => setNewEvent({ ...newEvent, startDate: e.target.value })}
-                    required
+                  <Label>Type</Label>
+                  <Select
+                    value={newEvent?.type || 'appointment'}
+                    onValueChange={(value) =>
+                      setNewEvent({ ...newEvent, type: value as EventType })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Type d'événement" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eventTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Statut</Label>
+                  <Select
+                    value={newEvent.status || 'scheduled'}
+                    onValueChange={(value) =>
+                      setNewEvent({ ...newEvent, status: value as EventStatus })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Statut" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eventStatuses?.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <DatePicker
+                    date={newEvent.date}
+                    onDateChange={(date) =>
+                      setNewEvent({ ...newEvent, date })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">Date de fin</Label>
-                  <Input
-                    id="endDate"
-                    type="datetime-local"
-                    value={newEvent.endDate}
-                    onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
-                    required
+                  <Label>Heure de début</Label>
+                  <TimeInput
+                    value={newEvent.startTime}
+                    onChange={(time) =>
+                      setNewEvent({ ...newEvent, startTime: time })
+                    }
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="location">Lieu</Label>
-                <Input
-                  id="location"
-                  value={newEvent.location}
-                  onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                />
+                <Label>Récurrence</Label>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={newEvent.isRecurring}
+                    onCheckedChange={(checked) =>
+                      setNewEvent({ ...newEvent, isRecurring: checked })
+                    }
+                  />
+                  <span>Activer la récurrence</span>
+                </div>
               </div>
+              {newEvent?.isRecurring && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Fréquence</Label>
+                    <Select
+                      value={newEvent?.recurrencePattern?.frequency || 'daily'}
+                      onValueChange={(value) =>
+                        setNewEvent({
+                          ...newEvent,
+                          recurrencePattern: {
+                            ...newEvent.recurrencePattern,
+                            frequency: value as RecurrenceFrequency
+                          }
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Fréquence" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {recurrenceFrequencies?.map((freq) => (
+                          <SelectItem key={freq.value} value={freq.value}>
+                            {freq.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {newEvent?.recurrencePattern?.frequency === 'weekly' && (
+                    <div className="space-y-2">
+                      <Label>Jours de la semaine</Label>
+                      <Select
+                        value={newEvent?.recurrencePattern?.daysOfWeek?.[0]?.toString() || '1'}
+                        onValueChange={(value) =>
+                          setNewEvent({
+                            ...newEvent,
+                            recurrencePattern: {
+                              ...newEvent.recurrencePattern,
+                              daysOfWeek: [parseInt(value)]
+                            }
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Jours" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {weekDays.map((day) => (
+                            <SelectItem key={day.value} value={day.value}>
+                              {day.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <select
-                  id="type"
-                  className="w-full px-3 py-2 border rounded-md"
-                  value={newEvent.type}
-                  onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value as IEvent['type'] })}
-                  required
-                >
-                  {eventTypes.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                <Label>Rappel</Label>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={newEvent?.reminder?.enabled}
+                    onCheckedChange={(checked) =>
+                      setNewEvent({
+                        ...newEvent,
+                        reminder: { ...newEvent.reminder!, enabled: checked }
+                      })
+                    }
+                  />
+                  <span>Activer le rappel</span>
+                </div>
+                {newEvent?.reminder?.enabled && (
+                  <div className="mt-2">
+                    <Label>Minutes avant l'événement</Label>
+                    <Input
+                      type="number"
+                      value={newEvent.reminder.timing}
+                      onChange={(e) =>
+                        setNewEvent({
+                          ...newEvent,
+                          reminder: {
+                            ...newEvent.reminder!,
+                            timing: parseInt(e.target.value)
+                          }
+                        })
+                      }
+                      min="1"
+                      max="1440"
+                    />
+                  </div>
+                )}
               </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button type="submit">
-                  Ajouter
-                </Button>
-              </div>
+              <Button type="submit" className="w-full">
+                Créer
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Barre de recherche */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
           <Input
             placeholder="Rechercher un événement..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="max-w-sm"
           />
         </div>
+        <Select
+          value={filters?.type || ''}
+          onValueChange={(value) => setFilters({ ...filters, type: value })}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Type d'événement" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les types</SelectItem>
+            {eventTypes?.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters?.status || ''}
+          onValueChange={(value) => setFilters({ ...filters, status: value })}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Statut" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les statuts</SelectItem>
+            {eventStatuses.map((status) => (
+              <SelectItem key={status.value} value={status.value}>
+                {status.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Liste des événements */}
-      <div className="grid gap-4">
-        {currentEvents.map((event) => (
-          <Card key={event._id} className="p-6">
-            <div className="flex flex-col sm:flex-row justify-between gap-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="all">Tous</TabsTrigger>
+          <TabsTrigger value="today">Aujourd'hui</TabsTrigger>
+          <TabsTrigger value="upcoming">À venir</TabsTrigger>
+          <TabsTrigger value="date-range">Par date</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="date-range" className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div>
+              <Label>Date de début</Label>
+              <DatePicker
+                date={dateRange.startDate}
+                onDateChange={(date) =>
+                  setDateRange({ ...dateRange, startDate: date })
+                }
+              />
+            </div>
+            <div>
+              <Label>Date de fin</Label>
+              <DatePicker
+                date={dateRange.endDate}
+                onDateChange={(date) =>
+                  setDateRange({ ...dateRange, endDate: date })
+                }
+              />
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <div className="space-y-4">
+        {loading ? (
+          <div className="flex justify-center">
+            <span>Chargement...</span>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Aucun événement trouvé</p>
+          </div>
+        ) : (filteredEvents?.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)?.map((event) => (
+          <Card key={event.id} className="p-4">
+            <div className="flex justify-between items-start gap-4">
               <div className="space-y-2">
-                <h3 className="font-medium">{event.title}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium">{event.title}</h3>
+                  {event.isRecurring && (
+                    <RepeatIcon className="w-4 h-4 text-gray-500" />
+                  )}
+                </div>
                 <p className="text-sm text-gray-500">{event.description}</p>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">
+                  <Badge>
                     {eventTypes.find(t => t.value === event.type)?.label}
                   </Badge>
                   <Badge variant="outline" className="flex items-center">
                     <CalendarIcon className="w-3 h-3 mr-1" />
-                    {format(new Date(event.startDate), 'dd/MM/yyyy')}
+                    {format(new Date(event.date), 'dd/MM/yyyy')}
                   </Badge>
                   <Badge variant="outline" className="flex items-center">
                     <Clock className="w-3 h-3 mr-1" />
-                    {format(new Date(event.startDate), 'HH:mm')} - {format(new Date(event.endDate), 'HH:mm')}
+                    {event.startTime} - {event.endTime}
                   </Badge>
-                  {event.location && (
-                    <Badge variant="outline">
+                  {event?.location && (
+                    <Badge variant="outline" className="flex items-center">
+                      <MapPin className="w-3 h-3 mr-1" />
                       {event.location}
+                    </Badge>
+                  )}
+                  {event?.participants && event.participants.length > 0 && (
+                    <Badge variant="outline" className="flex items-center">
+                      <Users className="w-3 h-3 mr-1" />
+                      {event.participants.length} participant(s)
+                    </Badge>
+                  )}
+                  {event?.reminder?.enabled && (
+                    <Badge variant="outline" className="flex items-center">
+                      <BellIcon className="w-3 h-3 mr-1" />
+                      Rappel {event.reminder.timing} min avant
                     </Badge>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleDelete(event._id)}>
-                  Supprimer
+                <Select
+                  value={event.status}
+                  onValueChange={(value) => handleStatusUpdate(event.id!, value as EventStatus)}
+                >
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventStatuses.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" onClick={() => handleDelete(event.id!)}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-4 h-4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                    />
+                  </svg>
                 </Button>
               </div>
             </div>
           </Card>
-        ))}
+        )))}
       </div>
 
-      {/* Pagination */}
-      {filteredEvents.length > ITEMS_PER_PAGE && (
+      {filteredEvents?.length > ITEMS_PER_PAGE && (
         <Pagination
           currentPage={currentPage}
           totalItems={filteredEvents.length}
