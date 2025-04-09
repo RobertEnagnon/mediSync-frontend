@@ -198,6 +198,16 @@ class AppointmentService {
     });
     return handleResponse(response);
   }
+
+  /**
+   * Récupère l'historique des rendez-vous
+   */
+  async getHistory(): Promise<IAppointment[]> {
+    const response = await fetch(`${API_BASE_URL}/appointments/history`, {
+      headers: this.getHeaders()
+    });
+    return handleResponse(response);
+  }
 }
 
 export const appointmentService = new AppointmentService();
