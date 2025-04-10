@@ -40,8 +40,10 @@ export const EventService = {
     event: Omit<Event, 'id'>,
     recurrencePattern: RecurrencePattern
   ): Promise<Event[]> => {
-    console.log("createRecurring events:")
-    console.dir(event)
+    // console.log("createRecurring event:")
+    // console.dir(event)
+    // console.log("createRecurring recurrencePattern:")
+    // console.dir(recurrencePattern)
     const response = await fetch(`${API_BASE_URL}/events/recurring`, {
       method: 'POST',
       headers: {

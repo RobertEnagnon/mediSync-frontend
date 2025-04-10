@@ -533,8 +533,8 @@ const Events = () => {
           <div className="text-center py-8">
             <p className="text-gray-500">Aucun événement trouvé</p>
           </div>
-        ) : (filteredEvents?.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)?.map((event) => (
-          <Card key={event.id} className="p-4">
+        ) : (filteredEvents?.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)?.map((event,index) => (
+          <Card key={index} className="p-4">
             <div className="flex justify-between items-start gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
