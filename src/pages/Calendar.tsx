@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { EventService } from '@/services/api/eventService';
 import { useToast } from '@/hooks/use-toast';
-import { Event, EventType } from "@/types/event";
+import { Event } from "@/types/event";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
@@ -25,15 +25,29 @@ import {
 
 type ViewMode = 'month' | 'week' | 'day';
 
+const EventType = {
+  APPOINTMENT: 'appointment',
+  SURGERY: 'surgery',
+  CONSULTATION: 'consultation',
+  MEETING: 'meeting',
+} as const;
+
+type EventType = typeof EventType[keyof typeof EventType];
+
+type EventWithDate = Omit<Event, 'date' | 'type'> & {
+  date: string;
+  type: EventType;
+};
+
 interface DraggableEventProps {
-  event: Event;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragEnd: (e: React.DragEvent) => void;
+  event: EventWithDate;
+  onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
+  onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void;
   children: React.ReactNode;
 }
 
 const DraggableEvent = ({ event, onDragStart, onDragEnd, children }: DraggableEventProps) => {
-  const handleDragStart = (e: React.DragEvent) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData('text/plain', event.id);
     onDragStart(e);
   };
@@ -50,9 +64,54 @@ const DraggableEvent = ({ event, onDragStart, onDragEnd, children }: DraggableEv
   );
 };
 
+const getEventTypeColor = (type: EventType) => {
+  switch (type) {
+    case 'appointment':
+      return 'bg-blue-500';
+    case 'surgery':
+      return 'bg-red-500';
+    case 'consultation':
+      return 'bg-green-500';
+    case 'meeting':
+      return 'bg-purple-500';
+    default:
+      return 'bg-gray-500';
+  }
+};
+
+const getEventTypeLightColor = (type: EventType) => {
+  switch (type) {
+    case 'appointment':
+      return 'bg-blue-100';
+    case 'surgery':
+      return 'bg-red-100';
+    case 'consultation':
+      return 'bg-green-100';
+    case 'meeting':
+      return 'bg-purple-100';
+    default:
+      return 'bg-gray-100';
+  }
+};
+
+const getEventTypeBorderColor = (type: EventType) => {
+  switch (type) {
+    case 'appointment':
+      return 'border-l-blue-500';
+    case 'surgery':
+      return 'border-l-red-500';
+    case 'consultation':
+      return 'border-l-green-500';
+    case 'meeting':
+      return 'border-l-purple-500';
+    default:
+      return 'border-l-gray-500';
+  }
+};
+
 const Calendar = () => {
   const [date, setDate] = useState<Date>(new Date());
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<EventWithDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>("all");
@@ -62,17 +121,17 @@ const Calendar = () => {
   const navigate = useNavigate();
 
   const eventTypes = [
-    { value: "appointment", label: "Rendez-vous" },
-    { value: "surgery", label: "Chirurgie" },
-    { value: "consultation", label: "Consultation" },
-    { value: "meeting", label: "Réunion" },
-  ];
+    { value: EventType.APPOINTMENT, label: "Rendez-vous" },
+    { value: EventType.SURGERY, label: "Chirurgie" },
+    { value: EventType.CONSULTATION, label: "Consultation" },
+    { value: EventType.MEETING, label: "Réunion" },
+  ] as const;
 
   const fetchEvents = async (start: Date, end: Date) => {
     try {
       setLoading(true);
       const data = await EventService.getByDateRange(start, end);
-      setEvents(data);
+      setEvents(data.map(event => ({ ...event, date: format(parseISO(event.date), 'yyyy-MM-dd'), type: event.type as EventType })));
       setError(null);
     } catch (err: any) {
       setError(err.message);
@@ -86,23 +145,26 @@ const Calendar = () => {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     const eventId = e.dataTransfer.getData('text/plain');
     setDraggingEventId(eventId);
   };
 
-  const handleDragOver = (e: React.DragEvent, date: Date) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, targetDate: Date) => {
     e.preventDefault();
-    e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+    const target = e.currentTarget;
+    target.classList.add('bg-blue-50/50');
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.style.backgroundColor = '';
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    target.classList.remove('bg-blue-50/50');
   };
 
-  const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, targetDate: Date) => {
     e.preventDefault();
-    e.currentTarget.style.backgroundColor = '';
+    const target = e.currentTarget;
+    target.classList.remove('bg-blue-50/50');
     
     if (!draggingEventId) return;
 
@@ -110,9 +172,10 @@ const Calendar = () => {
     if (!draggedEvent) return;
 
     try {
+      const formattedDate = format(targetDate, 'yyyy-MM-dd');
       await EventService.update(draggingEventId, {
         ...draggedEvent,
-        date: format(targetDate, 'yyyy-MM-dd'),
+        date: formattedDate
       });
 
       toast({
@@ -259,50 +322,43 @@ END:VCALENDAR`;
     }
   };
 
-  const renderEventIndicator = (day: Date) => {
-    if (!day || isNaN(day.getTime())) return null;
-    const dayEvents = getEventsForDate(day);
-    if (dayEvents.length === 0) return null;
+  const renderEventIndicator = (dayDate: Date) => {
+    const dayEvents = events.filter(event => isSameDay(parseISO(event.date), dayDate));
+    
+    if (dayEvents.length === 0) {
+      return null;
+    }
 
     return (
-      <div className="flex gap-1 mt-1">
-        {dayEvents.slice(0, 3).map((event, index) => (
-          <Tooltip key={index}>
-            <TooltipTrigger>
-              <div
-                className={cn(
-                  "w-1.5 h-1.5 rounded-full cursor-pointer",
-                  event.type === "appointment" && "bg-blue-500",
-                  event.type === "surgery" && "bg-red-500",
-                  event.type === "consultation" && "bg-green-500",
-                  event.type === "meeting" && "bg-purple-500"
-                )}
-              />
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="space-y-1">
-                <p className="font-medium">{event.title}</p>
-                <p className="text-xs text-gray-500">{event.startTime} - {event.endTime}</p>
-                {event.location && (
-                  <p className="text-xs text-gray-500">{event.location}</p>
-                )}
-              </div>
-            </TooltipContent>
-          </Tooltip>
+      <div className="flex gap-0.5 mt-1">
+        {dayEvents.slice(0, 3).map(event => (
+          <TooltipProvider key={event.id}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full cursor-pointer",
+                    getEventTypeColor(event.type)
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{event.title}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ))}
         {dayEvents.length > 3 && (
-          <Tooltip>
-            <TooltipTrigger>
-              <span className="text-xs text-gray-500">+{dayEvents.length - 3}</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="space-y-1">
-                {dayEvents.slice(3).map((event, index) => (
-                  <p key={index} className="text-sm">{event.title}</p>
-                ))}
-              </div>
-            </TooltipContent>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-1.5 h-1.5 rounded-full bg-gray-500 cursor-pointer" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{dayEvents.length - 3} événements supplémentaires</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
     );
@@ -341,10 +397,7 @@ END:VCALENDAR`;
                     <div
                       className={cn(
                         "text-sm p-1 mb-1 rounded",
-                        event.type === "appointment" && "bg-blue-100",
-                        event.type === "surgery" && "bg-red-100",
-                        event.type === "consultation" && "bg-green-100",
-                        event.type === "meeting" && "bg-purple-100"
+                        getEventTypeLightColor(event.type)
                       )}
                     >
                       {event.title}
@@ -397,10 +450,7 @@ END:VCALENDAR`;
                         <div
                           className={cn(
                             "text-sm p-2 mb-1 rounded",
-                            event.type === "appointment" && "bg-blue-100",
-                            event.type === "surgery" && "bg-red-100",
-                            event.type === "consultation" && "bg-green-100",
-                            event.type === "meeting" && "bg-purple-100"
+                            getEventTypeLightColor(event.type)
                           )}
                         >
                           {event.title}
@@ -430,15 +480,23 @@ END:VCALENDAR`;
       return <div {...props} />;
     }
 
+    const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDate(dayDate);
+    };
+
     return (
       <div
         {...props}
+        onClick={handleClick}
         onDragOver={(e) => handleDragOver(e, dayDate)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, dayDate)}
         className={cn(
           "w-full h-full p-2 flex flex-col",
           isToday(dayDate) && "bg-blue-50 font-bold",
+          isSameDay(dayDate, date) && !isToday(dayDate) && "bg-gray-100 font-semibold",
           !isSameMonth(dayDate, date) && "text-gray-400",
           "hover:bg-gray-100 cursor-pointer rounded-md transition-colors"
         )}
@@ -575,10 +633,7 @@ END:VCALENDAR`;
                       key={event.id}
                       className={cn(
                         "p-4 border-l-4",
-                        event.type === "appointment" && "border-l-blue-500",
-                        event.type === "surgery" && "border-l-red-500",
-                        event.type === "consultation" && "border-l-green-500",
-                        event.type === "meeting" && "border-l-purple-500"
+                        getEventTypeBorderColor(event.type)
                       )}
                     >
                       <div className="space-y-2">
