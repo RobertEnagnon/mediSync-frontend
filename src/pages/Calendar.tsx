@@ -129,17 +129,27 @@ const Calendar = () => {
 
   const fetchEvents = async (start: Date, end: Date) => {
     try {
+      const token = JSON.parse(localStorage.getItem('auth-storage'))?.state?.token;
+      if (!token) {
+        navigate('/login', { state: { from: '/calendar' } });
+        return;
+      }
+
       setLoading(true);
-      const data = await EventService.getByDateRange(start, end);
+      const data = await EventService.getByDateRange(start.toISOString(), end.toISOString());
       setEvents(data.map(event => ({ ...event, date: format(parseISO(event.date), 'yyyy-MM-dd'), type: event.type as EventType })));
       setError(null);
     } catch (err: any) {
       setError(err.message);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de charger les événements',
-        variant: 'destructive'
-      });
+      if (err.message.includes('Non autorisé')) {
+        navigate('/login', { state: { from: '/calendar' } });
+      } else {
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de charger les événements',
+          variant: 'destructive'
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -331,8 +341,8 @@ END:VCALENDAR`;
 
     return (
       <div className="flex gap-0.5 mt-1">
-        {dayEvents.slice(0, 3).map(event => (
-          <TooltipProvider key={event.id}>
+        {dayEvents.slice(0, 3)?.map((event,i) => (
+          <TooltipProvider key={i}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
@@ -620,7 +630,7 @@ END:VCALENDAR`;
             <ScrollArea className="h-[calc(100vh-300px)]">
               <div className="space-y-4">
                 {loading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
+                  Array.from({ length: 3 })?.map((_, i) => (
                     <Skeleton key={i} className="h-24 rounded-lg" />
                   ))
                 ) : selectedDateEvents.length === 0 ? (
@@ -629,42 +639,48 @@ END:VCALENDAR`;
                   </div>
                 ) : (
                   selectedDateEvents.map((event) => (
-                    <Card
+                    <DraggableEvent
                       key={event.id}
-                      className={cn(
-                        "p-4 border-l-4",
-                        getEventTypeBorderColor(event.type)
-                      )}
+                      event={event}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
                     >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{event.title}</h3>
-                          <Badge variant="outline">
-                            {eventTypes.find(t => t.value === event.type)?.label}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            <span>{event.startTime} - {event.endTime}</span>
+                      <Card
+                        className={cn(
+                          "p-4 border-l-4",
+                          getEventTypeBorderColor(event.type)
+                        )}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-medium">{event.title}</h3>
+                            <Badge variant="outline">
+                              {eventTypes.find(t => t.value === event.type)?.label}
+                            </Badge>
                           </div>
-                          {event.location && (
+                          
+                          <div className="flex items-center gap-4 text-sm text-gray-500">
                             <div className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              <span>{event.location}</span>
+                              <Clock className="w-4 h-4" />
+                              <span>{event.startTime} - {event.endTime}</span>
+                            </div>
+                            {event.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-4 h-4" />
+                                <span>{event.location}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {event.participants && event.participants.length > 0 && (
+                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                              <Users className="w-4 h-4" />
+                              <span>{event.participants.length} participant(s)</span>
                             </div>
                           )}
                         </div>
-
-                        {event.participants && event.participants.length > 0 && (
-                          <div className="flex items-center gap-1 text-sm text-gray-500">
-                            <Users className="w-4 h-4" />
-                            <span>{event.participants.length} participant(s)</span>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
+                      </Card>
+                    </DraggableEvent>
                   ))
                 )}
               </div>

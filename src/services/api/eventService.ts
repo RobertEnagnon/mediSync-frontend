@@ -155,8 +155,8 @@ export const EventService = {
     return handleResponse(response);
   },
 
-  getByDateRange: async (startDate: Date, endDate: Date): Promise<Event[]> => {
-    const url = `${API_BASE_URL}/events/date-range?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+  getByDateRange: async (startDate: string, endDate: string): Promise<Event[]> => {
+    const url = `${API_BASE_URL}/events/date-range?startDate=${startDate}&endDate=${endDate}`;
 
     const response = await fetch(url, {
       headers: {
