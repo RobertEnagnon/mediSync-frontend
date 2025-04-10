@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Calendar as CalendarIcon, Clock, Plus, Filter, ChevronLeft, ChevronRight, Users, MapPin, Calendar as CalendarIconBase } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Plus, Filter, ChevronLeft, ChevronRight, Users, MapPin, Calendar as CalendarIconBase, Download } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isToday, isSameDay, isSameMonth, parseISO, startOfWeek, endOfWeek, addDays, startOfDay, endOfDay, addWeeks, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
@@ -25,6 +25,31 @@ import {
 
 type ViewMode = 'month' | 'week' | 'day';
 
+interface DraggableEventProps {
+  event: Event;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragEnd: (e: React.DragEvent) => void;
+  children: React.ReactNode;
+}
+
+const DraggableEvent = ({ event, onDragStart, onDragEnd, children }: DraggableEventProps) => {
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', event.id);
+    onDragStart(e);
+  };
+
+  return (
+    <div
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={onDragEnd}
+      className="cursor-move"
+    >
+      {children}
+    </div>
+  );
+};
+
 const Calendar = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [events, setEvents] = useState<Event[]>([]);
@@ -32,6 +57,7 @@ const Calendar = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [draggingEventId, setDraggingEventId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -58,6 +84,118 @@ const Calendar = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDragStart = (e: React.DragEvent) => {
+    const eventId = e.dataTransfer.getData('text/plain');
+    setDraggingEventId(eventId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, date: Date) => {
+    e.preventDefault();
+    e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.style.backgroundColor = '';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+    e.currentTarget.style.backgroundColor = '';
+    
+    if (!draggingEventId) return;
+
+    const draggedEvent = events.find(e => e.id === draggingEventId);
+    if (!draggedEvent) return;
+
+    try {
+      await EventService.update(draggingEventId, {
+        ...draggedEvent,
+        date: format(targetDate, 'yyyy-MM-dd'),
+      });
+
+      toast({
+        title: "Événement déplacé",
+        description: `L'événement a été déplacé au ${format(targetDate, 'dd/MM/yyyy')}`,
+      });
+
+      let start: Date;
+      let end: Date;
+
+      switch (viewMode) {
+        case 'month':
+          start = startOfMonth(date);
+          end = endOfMonth(date);
+          break;
+        case 'week':
+          start = startOfWeek(date, { locale: fr });
+          end = endOfWeek(date, { locale: fr });
+          break;
+        case 'day':
+          start = startOfDay(date);
+          end = endOfDay(date);
+          break;
+      }
+
+      fetchEvents(start, end);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de déplacer l'événement",
+        variant: "destructive",
+      });
+    } finally {
+      setDraggingEventId(null);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggingEventId(null);
+  };
+
+  const generateICalFile = () => {
+    const calendar = {
+      events: events.map(event => {
+        const eventDate = parseISO(event.date);
+        const [startHour, startMinute] = event.startTime.split(':').map(Number);
+        const [endHour, endMinute] = event.endTime.split(':').map(Number);
+
+        const start = new Date(eventDate);
+        start.setHours(startHour, startMinute);
+
+        const end = new Date(eventDate);
+        end.setHours(endHour, endMinute);
+
+        return {
+          start: start.toISOString(),
+          end: end.toISOString(),
+          summary: event.title,
+          description: event.description,
+          location: event.location,
+        };
+      }),
+    };
+
+    const icalContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//MediSync Pro//Calendar//FR
+${calendar.events.map(event => `BEGIN:VEVENT
+DTSTART:${event.start.replace(/[-:]/g, '').replace(/\.\d{3}/, '')}
+DTEND:${event.end.replace(/[-:]/g, '').replace(/\.\d{3}/, '')}
+SUMMARY:${event.summary}
+${event.description ? `DESCRIPTION:${event.description}\n` : ''}${event.location ? `LOCATION:${event.location}\n` : ''}END:VEVENT`).join('\n')}
+END:VCALENDAR`;
+
+    const blob = new Blob([icalContent], { type: 'text/calendar' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `medisync-calendar-${format(date, 'yyyy-MM-dd')}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   useEffect(() => {
@@ -104,11 +242,7 @@ const Calendar = () => {
   };
 
   const handleExportCalendar = () => {
-    // TODO: Implémenter l'export iCal
-    toast({
-      title: "Export du calendrier",
-      description: "Fonctionnalité en cours de développement",
-    });
+    generateICalFile();
   };
 
   const handleNavigate = (direction: 'prev' | 'next') => {
@@ -183,6 +317,9 @@ const Calendar = () => {
         {days.map((day, index) => (
           <div
             key={index}
+            onDragOver={(e) => handleDragOver(e, day)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, day)}
             className={cn(
               "min-h-[150px] p-2 border rounded-md",
               isToday(day) && "bg-blue-50",
@@ -193,30 +330,37 @@ const Calendar = () => {
               {format(day, 'EEEE d', { locale: fr })}
             </div>
             {getEventsForDate(day).map((event, eventIndex) => (
-              <Tooltip key={eventIndex}>
-                <TooltipTrigger>
-                  <div
-                    className={cn(
-                      "text-sm p-1 mb-1 rounded",
-                      event.type === "appointment" && "bg-blue-100",
-                      event.type === "surgery" && "bg-red-100",
-                      event.type === "consultation" && "bg-green-100",
-                      event.type === "meeting" && "bg-purple-100"
-                    )}
-                  >
-                    {event.title}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="space-y-1">
-                    <p className="font-medium">{event.title}</p>
-                    <p className="text-xs">{event.startTime} - {event.endTime}</p>
-                    {event.location && (
-                      <p className="text-xs">{event.location}</p>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
+              <DraggableEvent
+                key={eventIndex}
+                event={event}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div
+                      className={cn(
+                        "text-sm p-1 mb-1 rounded",
+                        event.type === "appointment" && "bg-blue-100",
+                        event.type === "surgery" && "bg-red-100",
+                        event.type === "consultation" && "bg-green-100",
+                        event.type === "meeting" && "bg-purple-100"
+                      )}
+                    >
+                      {event.title}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-medium">{event.title}</p>
+                      <p className="text-xs">{event.startTime} - {event.endTime}</p>
+                      {event.location && (
+                        <p className="text-xs">{event.location}</p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </DraggableEvent>
             ))}
           </div>
         ))}
@@ -242,30 +386,37 @@ const Calendar = () => {
                   return eventHour === hour;
                 })
                 .map((event, index) => (
-                  <Tooltip key={index}>
-                    <TooltipTrigger>
-                      <div
-                        className={cn(
-                          "text-sm p-2 mb-1 rounded",
-                          event.type === "appointment" && "bg-blue-100",
-                          event.type === "surgery" && "bg-red-100",
-                          event.type === "consultation" && "bg-green-100",
-                          event.type === "meeting" && "bg-purple-100"
-                        )}
-                      >
-                        {event.title}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-medium">{event.title}</p>
-                        <p className="text-xs">{event.startTime} - {event.endTime}</p>
-                        {event.location && (
-                          <p className="text-xs">{event.location}</p>
-                        )}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  <DraggableEvent
+                    key={index}
+                    event={event}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <div
+                          className={cn(
+                            "text-sm p-2 mb-1 rounded",
+                            event.type === "appointment" && "bg-blue-100",
+                            event.type === "surgery" && "bg-red-100",
+                            event.type === "consultation" && "bg-green-100",
+                            event.type === "meeting" && "bg-purple-100"
+                          )}
+                        >
+                          {event.title}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="space-y-1">
+                          <p className="font-medium">{event.title}</p>
+                          <p className="text-xs">{event.startTime} - {event.endTime}</p>
+                          {event.location && (
+                            <p className="text-xs">{event.location}</p>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </DraggableEvent>
                 ))}
             </div>
           </div>
@@ -282,6 +433,9 @@ const Calendar = () => {
     return (
       <div
         {...props}
+        onDragOver={(e) => handleDragOver(e, dayDate)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, dayDate)}
         className={cn(
           "w-full h-full p-2 flex flex-col",
           isToday(dayDate) && "bg-blue-50 font-bold",
