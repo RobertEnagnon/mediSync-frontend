@@ -31,10 +31,10 @@ import { Pagination } from '@/components/ui/pagination';
 const ITEMS_PER_PAGE = 10;
 
 const documentTypes = [
-  { value: 'prescription', label: 'Ordonnance' },
-  { value: 'medical_report', label: 'Rapport médical' },
-  { value: 'test_result', label: 'Résultat de test' },
-  { value: 'other', label: 'Autre' }
+  { value: 'ordonnance', label: 'Ordonnance' },
+  { value: 'rapport_medical', label: 'Rapport médical' },
+  { value: 'resultat_examens', label: 'Résultat d\'examens' },
+  { value: 'autre', label: 'Autre' }
 ];
 
 const Documents = () => {
@@ -47,7 +47,7 @@ const Documents = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [newDocument, setNewDocument] = useState<Partial<CreateDocumentDto>>({
     title: '',
-    type: 'prescription',
+    type: 'ordonnance',
     clientId: '',
     description: '',
     tags: []
@@ -95,11 +95,30 @@ const Documents = () => {
       return;
     }
 
+    // Vérification des champs requis
+    if (!newDocument.title || !newDocument.type || !newDocument.clientId) {
+      toast({
+        title: 'Erreur',
+        description: 'Veuillez remplir tous les champs obligatoires (titre, type et client)',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
+      const authData = JSON.parse(localStorage.getItem('auth-storage') || '{}');
+      const practitionerId = authData?.state?.user?.id;
+
+      if (!practitionerId) {
+        throw new Error('Utilisateur non connecté');
+      }
+
       const documentData: CreateDocumentDto = {
         ...newDocument as CreateDocumentDto,
         file: selectedFile,
-        practitionerId: localStorage.getItem('userId') || ''
+        practitionerId,
+        type: newDocument.type as 'ordonnance' | 'rapport_medical' | 'resultat_examens' | 'autre'
       };
 
       await documentService.create(documentData);
@@ -108,16 +127,27 @@ const Documents = () => {
         description: 'Document ajouté avec succès'
       });
       setDialogOpen(false);
+      setSelectedFile(null);
+      setNewDocument({
+        title: '',
+        type: 'ordonnance',
+        clientId: '',
+        description: '',
+        tags: []
+      });
       
       // Rafraîchir la liste des documents
       const updatedDocuments = await documentService.getAll();
       setDocuments(updatedDocuments);
     } catch (err: any) {
+      console.error('Erreur lors de l\'ajout du document:', err);
       toast({
         title: 'Erreur',
-        description: err.message,
+        description: err.message || 'Erreur lors de l\'ajout du document',
         variant: 'destructive'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -170,8 +200,8 @@ const Documents = () => {
     doc.title.toLowerCase().includes(search.toLowerCase()) ||
     doc.type.toLowerCase().includes(search.toLowerCase()) ||
     (doc.description && doc.description.toLowerCase().includes(search.toLowerCase())) ||
-    clients.find(c => c._id === doc.clientId)?.firstName.toLowerCase().includes(search.toLowerCase()) ||
-    clients.find(c => c._id === doc.clientId)?.lastName.toLowerCase().includes(search.toLowerCase())
+    clients.find(c => c._id === doc.clientId?._id)?.firstName.toLowerCase().includes(search.toLowerCase()) ||
+    clients.find(c => c._id === doc.clientId?._id)?.lastName.toLowerCase().includes(search.toLowerCase())
   );
 
   // Pagination
@@ -313,18 +343,18 @@ const Documents = () => {
                   <p className="text-sm text-gray-500">{document.description}</p>
                 )}
                 <p className="text-sm text-gray-500">
-                  Client: {clients.find(c => c._id === document.clientId)?.firstName} {clients.find(c => c._id === document.clientId)?.lastName}
+                  Client: {clients.find(c => c._id === document.clientId?._id)?.firstName} {clients.find(c => c._id === document.clientId?._id)?.lastName}
                 </p>
                 <p className="text-sm text-gray-500">
                   Ajouté le {format(new Date(document.createdAt), 'dd MMMM yyyy', { locale: fr })}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleDownload(document._id, document.title)}>
+                <Button variant="outline" size="sm" onClick={() => handleDownload(document.id, document.title)}>
                   <Download className="w-4 h-4 mr-2" />
                   Télécharger
                 </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(document._id)}>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(document.id)}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>

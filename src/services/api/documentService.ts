@@ -70,25 +70,46 @@ class DocumentService {
    * Crée un nouveau document
    */
   async create(document: CreateDocumentDto): Promise<IDocument> {
-    const formData = new FormData();
-    formData.append('file', document.file);
-    formData.append('data', JSON.stringify({
-      title: document.title,
-      type: document.type,
-      clientId: document.clientId,
-      practitionerId: document.practitionerId,
-      description: document.description,
-      tags: document.tags
-    }));
+    try {
+      const formData = new FormData();
+      formData.append('file', document.file);
+      
+      // Vérification des champs requis
+      if (!document.title || !document.type || !document.clientId || !document.practitionerId) {
+        throw new Error('Champs obligatoires manquants');
+      }
 
-    const response = await fetch(`${API_BASE_URL}/documents/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`
-      },
-      body: formData
-    });
-    return handleResponse(response);
+      const documentData = {
+        title: document.title,
+        type: document.type,
+        clientId: document.clientId,
+        practitionerId: document.practitionerId,
+        description: document.description || '',
+        tags: document.tags || []
+      };
+
+      // Important : le backend s'attend à recevoir les données dans un champ 'data'
+      formData.append('data', JSON.stringify(documentData));
+
+      const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erreur de création du document:', errorData);
+        throw new Error(errorData.error || 'Erreur lors du téléchargement du document');
+      }
+
+      return handleResponse(response);
+    } catch (error: any) {
+      console.error('Erreur lors de la création du document:', error);
+      throw error;
+    }
   }
 
   /**
