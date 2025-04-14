@@ -10,7 +10,10 @@ import {
   User,
   MapPin,
   Type as TypeIcon,
-  AlertTriangle
+  AlertTriangle,
+  MoreVertical,
+  Edit,
+  Trash
 } from 'lucide-react';
 import {
   Dialog,
@@ -74,6 +77,8 @@ import {
 import {
   Loader2
 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
+import cn from 'classnames';
 
 const ITEMS_PER_PAGE = 10;
 const DEFAULT_DURATION = 30;
@@ -85,12 +90,11 @@ const appointmentTypes: { value: AppointmentType; label: string }[] = [
   { value: 'other', label: 'Autre' }
 ];
 
-const appointmentStatuses: { value: AppointmentStatus; label: string; color: string }[] = [
-  { value: 'pending', label: 'En attente', color: 'bg-blue-100 text-blue-800' },
-  { value: 'scheduled', label: 'Planifié', color: 'bg-purple-100 text-purple-800' },
-  { value: 'confirmed', label: 'Confirmé', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'completed', label: 'Terminé', color: 'bg-green-100 text-green-800' },
-  { value: 'cancelled', label: 'Annulé', color: 'bg-red-100 text-red-800' }
+const appointmentStatuses = [
+  { value: 'scheduled' as AppointmentStatus, label: 'Planifié' },
+  { value: 'completed' as AppointmentStatus, label: 'Terminé' },
+  { value: 'cancelled' as AppointmentStatus, label: 'Annulé' },
+  { value: 'pending' as AppointmentStatus, label: 'En attente' }
 ];
 
 export default function Appointments() {
@@ -267,6 +271,29 @@ export default function Appointments() {
         variant: "destructive",
         title: "Erreur",
         description: error.message || "Impossible de supprimer le rendez-vous"
+      });
+    }
+  };
+
+  const handleStatusChange = async (id: string, newStatus: AppointmentStatus) => {
+    try {
+      await appointmentService.updateStatus(id, newStatus);
+      
+      // Mise à jour locale
+      setAppointments(prev => prev.map(app => 
+        app.id === id ? { ...app, status: newStatus } : app
+      ));
+
+      toast({
+        title: "Succès",
+        description: "Le statut du rendez-vous a été mis à jour"
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible de mettre à jour le statut du rendez-vous"
       });
     }
   };
@@ -575,9 +602,9 @@ export default function Appointments() {
       <div className="grid gap-4">
         {paginatedAppointments?.length > 0 ? (
           paginatedAppointments?.map((appointment) => {
-            const client = clients?.find(c => c._id === appointment.clientId._id);
-            const status = appointmentStatuses?.find(s => s.value === appointment.status);
-            const type = appointmentTypes?.find(t => t.value === appointment.type);
+            const status = appointmentStatuses.find(s => s.value === appointment.status);
+            const type = appointmentTypes.find(t => t.value === appointment.type);
+            const client = clients.find(c => c._id === (typeof appointment.clientId === 'string' ? appointment.clientId : appointment.clientId._id));
             
             return (
               <Card key={appointment.id} className="group hover:shadow-md transition-shadow">
@@ -586,8 +613,14 @@ export default function Appointments() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-lg">{appointment.title}</h3>
-                        <Badge variant="outline" className={status?.color}>
-                          {status?.label}
+                        <Badge className={cn(
+                          appointment.status === 'scheduled' && "bg-blue-500 hover:bg-blue-600",
+                          appointment.status === 'completed' && "bg-green-500 hover:bg-green-600",
+                          appointment.status === 'cancelled' && "bg-red-500 hover:bg-red-600",
+                          appointment.status === 'pending' && "bg-yellow-500 hover:bg-yellow-600",
+                          !appointment.status && "bg-gray-500 hover:bg-gray-600"
+                        )}>
+                          {status?.label || 'Non défini'}
                         </Badge>
                       </div>
                       
@@ -624,12 +657,46 @@ export default function Appointments() {
                     </div>
 
                     <div className="flex items-start gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEditDialog(appointment)}>
-                        Modifier
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(appointment)}>
-                        Supprimer
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openEditDialog(appointment)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Modifier
+                          </DropdownMenuItem>
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <Clock className="mr-2 h-4 w-4" />
+                              Changer le statut
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              {appointmentStatuses.map((s) => (
+                                <DropdownMenuItem
+                                  key={s.value}
+                                  onClick={() => handleStatusChange(appointment.id, s.value)}
+                                  disabled={appointment.status === s.value}
+                                >
+                                  <span className={`mr-2 h-2 w-2 rounded-full ${s.value === 'scheduled' ? 'bg-blue-500' : s.value === 'completed' ? 'bg-green-500' : s.value === 'cancelled' ? 'bg-red-500' : s.value === 'pending' ? 'bg-yellow-500' : ''}`}></span>
+                                  {s.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          <DropdownMenuItem
+                            onClick={() => openDeleteDialog(appointment)}
+                            className="text-red-600"
+                          >
+                            <Trash className="mr-2 h-4 w-4" />
+                            Supprimer
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardContent>

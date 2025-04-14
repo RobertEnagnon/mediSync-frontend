@@ -274,7 +274,12 @@ class AppointmentService {
    * Change le statut d'un rendez-vous
    */
   async updateStatus(id: string, status: IAppointment['status']): Promise<IAppointment> {
-    return this.update(id, { status });
+    const response = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+      method: 'PATCH',
+      headers: await this.getHeaders(),
+      body: JSON.stringify({ status })
+    });
+    return this.handleResponse(response);
   }
 
   /**

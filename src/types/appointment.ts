@@ -1,4 +1,3 @@
-
 import { IClient } from './client';
 
 export interface IAppointment {
@@ -11,7 +10,7 @@ export interface IAppointment {
   startTime?: string;
   endTime?: string;
   location?: string;
-  clientId: IClient;
+  clientId: string | IClient;
   type?: AppointmentType;
   status?: AppointmentStatus;
   createdAt: string;
@@ -35,9 +34,6 @@ export interface CreateAppointmentDto {
 // export type AppointmentStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
 export type AppointmentStatus = 'pending' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
 // export type AppointmentType = 'meeting' | 'training' | 'holiday' | 'other';
-export type AppointmentType = 'consultation' | 'follow-up' | 'emergency' | 'other';;
-
-
-
+export type AppointmentType = 'consultation' | 'follow-up' | 'emergency' | 'other';
 
 export interface UpdateAppointmentDto extends Partial<CreateAppointmentDto> {}
