@@ -345,8 +345,8 @@ export default function Appointments() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Rendez-vous</h1>
+      <div className="flex justify-between items-center flex-wrap">
+        <h1 className="md:text-3xl text-xl font-bold">Rendez-vous</h1>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nouveau rendez-vous

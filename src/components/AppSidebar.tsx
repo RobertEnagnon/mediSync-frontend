@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -90,11 +90,11 @@ const navItems: NavItem[] = [
   },
 ];
 
-export const AppSidebar = () => {
+export const AppSidebar = ({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) => {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  // const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -174,30 +174,27 @@ export const AppSidebar = () => {
     <>
       {/* Version mobile */}
       <div className="lg:hidden">
-        <div className="flex h-16 items-center justify-between border-b px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="Logo" className="h-8 w-8" />
-            <span className="font-semibold">MediSync Pro</span>
-          </Link>
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                {isMobileMenuOpen ? (
-                  <X className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0">
-              <SidebarContent />
-            </SheetContent>
-          </Sheet>
-        </div>
+        <Sheet open={open} onOpenChange={setOpen}>
+          {/* <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              className="px-2 py-2"
+            >
+              {open ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </Button>
+          </SheetTrigger> */}
+          <SheetContent side="left" className="w-72 p-0">
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
       </div>
 
       {/* Version desktop */}
-      <div className="hidden border-r bg-background lg:block lg:w-72">
+      <div className="h-screen w-72 border-r bg-background">
         <SidebarContent />
       </div>
     </>
