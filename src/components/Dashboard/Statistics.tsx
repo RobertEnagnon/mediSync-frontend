@@ -28,6 +28,7 @@ interface StatisticsData {
   averageSessionDuration: number;
   clientGrowthRate: number;
 }
+import { API_BASE_URL,getAuthToken } from '@/services/api/config';
 
 export default function Statistics() {
   const { toast } = useToast();
@@ -40,7 +41,12 @@ export default function Statistics() {
 
   const fetchStatistics = async () => {
     try {
-      const response = await fetch('/api/statistics/dashboard');
+      const response = await fetch(`${API_BASE_URL}/statistics/dashboard`,{
+        headers: {
+          'Content-Type': 'application/json',
+          "Authorization": `Bearer ${getAuthToken()}`
+        }
+      });
       if (!response.ok) {
         throw new Error('Erreur lors de la récupération des statistiques');
       }

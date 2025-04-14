@@ -20,40 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-
-// Composant pour afficher un indicateur statistique
-const StatCard = ({
-  title,
-  value,
-  icon: Icon,
-  description,
-  trend
-}: {
-  title: string;
-  value: number | string;
-  icon: React.ElementType;
-  description?: string;
-  trend?: { value: number; isPositive: boolean };
-}) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-      {description && (
-        <p className="text-xs text-muted-foreground">{description}</p>
-      )}
-      {trend && (
-        <div className={`text-xs ${trend.isPositive ? 'text-green-500' : 'text-red-500'} flex items-center gap-1 mt-1`}>
-          <TrendingUp className="h-3 w-3" />
-          {trend.value}% par rapport au mois dernier
-        </div>
-      )}
-    </CardContent>
-  </Card>
-);
+import Statistics from '@/components/Dashboard/Statistics';
 
 // Composant pour afficher un rendez-vous
 const AppointmentCard = ({ appointment }: { appointment: any }) => (
@@ -133,31 +100,9 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Statistiques principales */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Clients"
-          value={dashboardStats?.stats.totalClients || 0}
-          icon={Users}
-          trend={{ value: 12, isPositive: true }}
-        />
-        <StatCard
-          title="Rendez-vous aujourd'hui"
-          value={dashboardStats?.stats.totalAppointmentsToday || 0}
-          icon={Calendar}
-        />
-        <StatCard
-          title="Notifications"
-          value={dashboardStats?.stats.unreadNotifications || 0}
-          icon={Bell}
-        />
-        <StatCard
-          title="Taux d'occupation"
-          value={`${Math.round(dashboardStats?.stats.occupancyRate || 0)}%`}
-          icon={TrendingUp}
-        />
-      </div>
+    <div className="space-y-8">
+      {/* Section des statistiques */}
+      <Statistics />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Graphique d'activité */}
