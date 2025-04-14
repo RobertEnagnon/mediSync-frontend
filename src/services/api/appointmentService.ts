@@ -1,35 +1,52 @@
 import { API_BASE_URL, getAuthToken } from './config';
 import { parseISO, isValid, differenceInMinutes } from 'date-fns';
+import { IClient } from '../../types/client';
 
 interface IAppointment {
-  id: string;
-  title: string;
-  description?: string;
-  clientId: string;
-  practitionerId: string;
-  startTime: string;
-  endTime: string;
-  location?: string;
-  type: AppointmentType;
-  status: AppointmentStatus;
+
+   id: string;
+    title: string;
+    description?: string;
+    date?: Date | string;
+    duration?: number;
+    notes?: string;
+    startTime?: string;
+    endTime?: string;
+    location?: string;
+    clientId: string;
+    practitionerId: string;
+    type?: AppointmentType;
+    status?: AppointmentStatus;
+    createdAt: string;
+    updatedAt: string;
 }
 
 interface CreateAppointmentDto {
-  title: string;
-  description?: string;
-  clientId: string;
-  practitionerId: string;
-  startTime: string;
-  endTime: string;
-  location?: string;
-  type: AppointmentType;
-  status?: AppointmentStatus;
+
+   title: string;
+    description?: string;
+    date?: Date | string;
+    startTime?: string;
+    endTime?: string;
+    location?: string;
+    duration?: number;
+    notes?: string;
+    clientId: string;
+    practitionerId: string;
+    type?: AppointmentType;
+    status: AppointmentStatus;
 }
 
 interface UpdateAppointmentDto extends Partial<CreateAppointmentDto> {}
 
-type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled';
-type AppointmentType = 'meeting' | 'training' | 'holiday' | 'other';
+
+// export type AppointmentStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+export type AppointmentStatus = 'pending' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+// export type AppointmentType = 'meeting' | 'training' | 'holiday' | 'other';
+export type AppointmentType = 'consultation' | 'follow-up' | 'emergency' | 'other';
+
+
+
 
 /**
  * Service pour la gestion des rendez-vous
@@ -69,13 +86,16 @@ class AppointmentService {
     
     return {
       title: appointment.title || 'Sans titre',
-      date: startTime,
-      duration: differenceInMinutes(new Date(endTime), new Date(startTime)),
+      // date: startTime,
+      date: appointment.date,
+      // duration: differenceInMinutes(new Date(endTime), new Date(startTime)),
+      duration: appointment.duration,
       clientId: appointment.clientId || '0',
       practitionerId: appointment.practitionerId || '0',
       type: appointment.type || 'meeting',
       status: appointment.status || 'scheduled',
       description: appointment.description,
+      notes: appointment.notes,
       location: appointment.location
     };
   }
@@ -108,7 +128,12 @@ class AppointmentService {
           endTime,
           location: appointment.location,
           type: appointment.type || 'meeting',
-          status: appointment.status || 'scheduled'
+          status: appointment.status || 'scheduled',
+          notes: appointment.notes,
+          date: appointment.date,
+          duration: appointment.duration,
+          createdAt: appointment.createdAt,
+          updatedAt: appointment.updatedAt,
         };
       } catch (error) {
         console.error('Erreur lors du traitement du rendez-vous:', error);
@@ -138,7 +163,12 @@ class AppointmentService {
       endTime,
       location: data.location,
       type: data.type || 'meeting',
-      status: data.status || 'scheduled'
+      status: data.status || 'scheduled',
+      notes: data.notes,
+      date: data.date,
+      duration: data.duration,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
     };
   }
 

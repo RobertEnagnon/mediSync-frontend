@@ -170,7 +170,7 @@ export default function Appointments() {
         location: formData.get('location') as string,
         status: 'pending' as AppointmentStatus
       };
-
+      console.log(appointmentData);
       const newAppointment = await appointmentService.create(appointmentData);
       setAppointments(prev => [...prev, newAppointment]);
       
@@ -473,7 +473,7 @@ export default function Appointments() {
                   id="date"
                   name="date"
                   type="datetime-local"
-                  defaultValue={selectedAppointment ? format(parseISO(selectedAppointment.date), "yyyy-MM-dd'T'HH:mm") : undefined}
+                  defaultValue={selectedAppointment ? format(parseISO(selectedAppointment.startTime), "yyyy-MM-dd'T'HH:mm") : undefined}
                   required
                 />
               </div>
@@ -573,11 +573,11 @@ export default function Appointments() {
       </Dialog>
 
       <div className="grid gap-4">
-        {paginatedAppointments.length > 0 ? (
-          paginatedAppointments.map((appointment) => {
-            const client = clients.find(c => c._id === appointment.clientId._id);
-            const status = appointmentStatuses.find(s => s.value === appointment.status);
-            const type = appointmentTypes.find(t => t.value === appointment.type);
+        {paginatedAppointments?.length > 0 ? (
+          paginatedAppointments?.map((appointment) => {
+            const client = clients?.find(c => c._id === appointment.clientId._id);
+            const status = appointmentStatuses?.find(s => s.value === appointment.status);
+            const type = appointmentTypes?.find(t => t.value === appointment.type);
             
             return (
               <Card key={appointment.id} className="group hover:shadow-md transition-shadow">
@@ -601,7 +601,7 @@ export default function Appointments() {
                       <div className="flex items-center gap-2 text-gray-500">
                         <Calendar className="h-4 w-4" />
                         <span>
-                          {format(parseISO(appointment.date), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
+                          {format(parseISO(appointment.startTime), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
                         </span>
                       </div>
 

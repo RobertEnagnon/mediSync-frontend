@@ -5,11 +5,15 @@ export interface IAppointment {
   id: string;
   title: string;
   description?: string;
-  startTime: string;
-  endTime: string;
+  date?: Date | string;
+  duration?: number;
+  notes?: string;
+  startTime?: string;
+  endTime?: string;
   location?: string;
   clientId: IClient;
-  status: 'scheduled' | 'completed' | 'cancelled';
+  type?: AppointmentType;
+  status?: AppointmentStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -17,15 +21,21 @@ export interface IAppointment {
 export interface CreateAppointmentDto {
   title: string;
   description?: string;
-  startTime: string;
-  endTime: string;
+  date?: Date | string;
+  startTime?: string;
+  endTime?: string;
   location?: string;
+  duration?: number;
+  notes?: string;
   clientId: string;
-  status?: 'scheduled' | 'completed' | 'cancelled';
+  type?: AppointmentType;
+  status: AppointmentStatus;
 }
 
-export type AppointmentStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-export type AppointmentType = 'meeting' | 'training' | 'holiday' | 'other';
+// export type AppointmentStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+export type AppointmentStatus = 'pending' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+// export type AppointmentType = 'meeting' | 'training' | 'holiday' | 'other';
+export type AppointmentType = 'consultation' | 'follow-up' | 'emergency' | 'other';;
 
 
 
