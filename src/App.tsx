@@ -24,6 +24,8 @@ import ResetPassword from "./pages/ResetPassword"; // Importation de la page de 
 import VerifyEmail from "./pages/VerifyEmail"; // Importation de la page de vérification d'email
 import RegistrationSuccess from "./pages/RegistrationSuccess"; // Importation de la page de succès d'inscription
 import Invoices from "./pages/Invoices"; // Importation de la page des factures
+import CreateInvoice from "./pages/CreateInvoice"; // Importation de la page de création de facture
+import InvoiceDetail from "./pages/InvoiceDetail"; // Importation de la page de détail de facture
 import Documents from "./pages/Documents"; // Importation de la page des documents
 import Events from "./pages/Events"; // Importation de la page des événements
 
@@ -62,6 +64,8 @@ const App = () => (
           <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} /> {/* Route pour les clients */}
           <Route path="/clients/:id" element={<ProtectedRoute><ClientDetails /></ProtectedRoute>} /> {/* Route pour les détails d'un client */}
           <Route path="/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} /> {/* Route pour les factures */}
+          <Route path="/invoices/create" element={<ProtectedRoute><CreateInvoice /></ProtectedRoute>} /> {/* Route pour la création de facture */}
+          <Route path="/invoices/:id" element={<ProtectedRoute><InvoiceDetail /></ProtectedRoute>} /> {/* Route pour le détail d'une facture */}
           <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} /> {/* Route pour les documents */}
           <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} /> {/* Route pour les événements */}
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} /> {/* Route pour le profil */}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { invoiceService, Invoice } from '@/services/api/invoiceService';
+import { invoiceService, IInvoice } from '@/services/api/invoiceService';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -56,7 +56,7 @@ const statusLabels = {
   cancelled: 'Annulée'
 };
 
-const InvoiceStatusBadge = ({ status }: { status: Invoice['status'] }) => (
+const InvoiceStatusBadge = ({ status }: { status: IInvoice['status'] }) => (
   <Badge className={statusColors[status]}>
     {statusLabels[status]}
   </Badge>
@@ -66,7 +66,7 @@ const Invoices = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState<Invoice['status'] | 'all'>('all');
+  const [statusFilter, setStatusFilter] = React.useState<IInvoice['status'] | 'all'>('all');
 
   // Récupération des factures
   const { data: invoices, isLoading, refetch } = useQuery({
@@ -88,9 +88,9 @@ const Invoices = () => {
   }, [invoices, searchTerm, statusFilter]);
 
   // Gestion du téléchargement
-  const handleDownload = async (invoice: Invoice) => {
+  const handleDownload = async (invoice: IInvoice) => {
     try {
-      const blob = await invoiceService.downloadPdf(invoice._id);
+      const blob = await invoiceService.downloadPdf(invoice.id);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -108,9 +108,9 @@ const Invoices = () => {
   };
 
   // Marquer comme payée
-  const handleMarkAsPaid = async (invoice: Invoice) => {
+  const handleMarkAsPaid = async (invoice: IInvoice) => {
     try {
-      await invoiceService.markAsPaid(invoice._id, 'card');
+      await invoiceService.markAsPaid(invoice.id, 'card');
       refetch();
       toast({
         title: 'Succès',
@@ -126,9 +126,9 @@ const Invoices = () => {
   };
 
   // Annuler une facture
-  const handleCancel = async (invoice: Invoice) => {
+  const handleCancel = async (invoice: IInvoice) => {
     try {
-      await invoiceService.cancel(invoice._id);
+      await invoiceService.cancel(invoice.id);
       refetch();
       toast({
         title: 'Succès',
@@ -161,7 +161,7 @@ const Invoices = () => {
               <CardTitle>Factures</CardTitle>
               <CardDescription>Gérez vos factures et suivez les paiements</CardDescription>
             </div>
-            <Button onClick={() => navigate('/invoices/new')}>
+            <Button onClick={() => navigate('/invoices/create')}>
               <Plus className="mr-2 h-4 w-4" />
               Nouvelle facture
             </Button>
@@ -216,15 +216,17 @@ const Invoices = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.map((invoice) => (
-                <TableRow key={invoice._id}>
+              {filteredInvoices?.map((invoice) => (
+                <TableRow key={invoice.id}>
                   <TableCell>{invoice.invoiceNumber}</TableCell>
                   <TableCell>
                     {format(new Date(invoice.createdAt), 'PP', { locale: fr })}
                   </TableCell>
                   <TableCell>
-                    {/* À implémenter: afficher le nom du client */}
-                    Client {invoice.clientId}
+                    <span>
+                      {/* À implémenter: afficher le nom du client */}
+                      {`Client ${typeof invoice.clientId === 'string' ? invoice.clientId : (invoice.clientId as any).id}`}
+                    </span>
                   </TableCell>
                   <TableCell>{invoice.total.toFixed(2)} €</TableCell>
                   <TableCell>
@@ -238,7 +240,7 @@ const Invoices = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/invoices/${invoice._id}`)}>
+                        <DropdownMenuItem onClick={() => navigate(`/invoices/${invoice.id}`)}>
                           <Eye className="mr-2 h-4 w-4" />
                           Voir
                         </DropdownMenuItem>

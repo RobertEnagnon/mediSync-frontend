@@ -1,32 +1,7 @@
 import { API_BASE_URL, headers, handleResponse, getAuthToken } from './config';
+import { IInvoice, IInvoiceItem, ICreateInvoiceDto, IUpdateInvoiceDto } from '../../types/invoice';
 
-export interface InvoiceItem {
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-}
-
-export interface Invoice {
-  _id: string;
-  invoiceNumber: string;
-  clientId: string;
-  appointmentId?: string;
-  items: InvoiceItem[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  status: 'pending' | 'paid' | 'cancelled';
-  paymentMethod?: string;
-  paymentDate?: Date;
-  dueDate: Date;
-  notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export type CreateInvoiceDto = Omit<Invoice, '_id' | 'createdAt' | 'updatedAt' | 'invoiceNumber'>;
-export type UpdateInvoiceDto = Partial<CreateInvoiceDto>;
+export type { IInvoice, IInvoiceItem, ICreateInvoiceDto, IUpdateInvoiceDto };
 
 /**
  * Service pour la gestion des factures
@@ -43,7 +18,7 @@ class InvoiceService {
   /**
    * Récupère toutes les factures
    */
-  async getAll(): Promise<Invoice[]> {
+  async getAll(): Promise<IInvoice[]> {
     const response = await fetch(`${API_BASE_URL}/invoices`, {
       headers: this.getHeaders()
     });
@@ -53,7 +28,7 @@ class InvoiceService {
   /**
    * Récupère une facture par son ID
    */
-  async getById(id: string): Promise<Invoice> {
+  async getById(id: string): Promise<IInvoice> {
     const response = await fetch(`${API_BASE_URL}/invoices/${id}`, {
       headers: this.getHeaders()
     });
@@ -63,7 +38,7 @@ class InvoiceService {
   /**
    * Récupère les factures d'un client
    */
-  async getByClientId(clientId: string): Promise<Invoice[]> {
+  async getByClientId(clientId: string): Promise<IInvoice[]> {
     const response = await fetch(`${API_BASE_URL}/clients/${clientId}/invoices`, {
       headers: this.getHeaders()
     });
@@ -73,7 +48,7 @@ class InvoiceService {
   /**
    * Crée une nouvelle facture
    */
-  async create(data: CreateInvoiceDto): Promise<Invoice> {
+  async create(data: ICreateInvoiceDto): Promise<IInvoice> {
     const response = await fetch(`${API_BASE_URL}/invoices`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -85,7 +60,7 @@ class InvoiceService {
   /**
    * Met à jour une facture
    */
-  async update(id: string, data: UpdateInvoiceDto): Promise<Invoice> {
+  async update(id: string, data: IUpdateInvoiceDto): Promise<IInvoice> {
     const response = await fetch(`${API_BASE_URL}/invoices/${id}`, {
       method: 'PUT',
       headers: this.getHeaders(),
@@ -118,7 +93,7 @@ class InvoiceService {
   /**
    * Marque une facture comme payée
    */
-  async markAsPaid(id: string, paymentMethod: string): Promise<Invoice> {
+  async markAsPaid(id: string, paymentMethod: string): Promise<IInvoice> {
     const response = await fetch(`${API_BASE_URL}/invoices/${id}/pay`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -130,7 +105,7 @@ class InvoiceService {
   /**
    * Annule une facture
    */
-  async cancel(id: string, reason?: string): Promise<Invoice> {
+  async cancel(id: string, reason?: string): Promise<IInvoice> {
     const response = await fetch(`${API_BASE_URL}/invoices/${id}/cancel`, {
       method: 'POST',
       headers: this.getHeaders(),
