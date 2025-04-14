@@ -1,98 +1,131 @@
-import { API_BASE_URL, headers, handleResponse, getAuthToken } from './config';
+import { API_BASE_URL, getAuthToken } from './config';
 
-export interface IUser {
-  _id: string;
+export interface UserProfile {
+  id: string;
+  email: string;
   firstName: string;
   lastName: string;
-  email: string;
-  role: 'admin' | 'user';
-  createdAt: Date;
-  updatedAt: Date;
+  role: string;
+  specialization?: string;
+  phoneNumber?: string;
+  settings: {
+    theme: 'light' | 'dark';
+    notifications: boolean;
+    language: string;
+  };
+  lastLogin?: string;
+  isVerified: boolean;
 }
 
-export type UpdateUserDto = Partial<Omit<IUser, '_id' | 'role' | 'createdAt' | 'updatedAt'>>;
+export interface UserSettings {
+  theme: 'light' | 'dark';
+  notifications: boolean;
+  language: string;
+}
 
-/**
- * Service pour la gestion des utilisateurs
- */
+export interface UpdateProfileDto {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  specialization?: string;
+  phoneNumber?: string;
+}
+
 class UserService {
   private getHeaders() {
-    const token = getAuthToken();
     return {
-      ...headers,
-      Authorization: `Bearer ${token}`
+      'Authorization': `Bearer ${getAuthToken()}`,
+      'Content-Type': 'application/json',
     };
   }
 
-  /**
-   * Récupère le profil de l'utilisateur connecté
-   */
-  async getProfile(): Promise<IUser> {
+  async getProfile(): Promise<UserProfile> {
     const response = await fetch(`${API_BASE_URL}/users/profile`, {
-      headers: this.getHeaders()
+      headers: this.getHeaders(),
     });
-    return handleResponse(response);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors de la récupération du profil');
+    }
+
+    return response.json();
   }
 
-  /**
-   * Met à jour le profil de l'utilisateur connecté
-   */
-  async updateProfile(data: UpdateUserDto): Promise<IUser> {
+  async updateProfile(data: UpdateProfileDto): Promise<UserProfile> {
     const response = await fetch(`${API_BASE_URL}/users/profile`, {
       method: 'PUT',
       headers: this.getHeaders(),
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
-    return handleResponse(response);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors de la mise à jour du profil');
+    }
+
+    return response.json();
   }
 
-  /**
-   * Change le mot de passe de l'utilisateur connecté
-   */
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/users/change-password`, {
+  async getSettings(): Promise<UserSettings> {
+    const response = await fetch(`${API_BASE_URL}/users/settings`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors de la récupération des paramètres');
+    }
+
+    return response.json();
+  }
+
+  async updateSettings(settings: Partial<UserSettings>): Promise<UserSettings> {
+    const response = await fetch(`${API_BASE_URL}/users/settings`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(settings),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors de la mise à jour des paramètres');
+    }
+
+    return response.json();
+  }
+
+  async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/users/password`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors du changement de mot de passe');
+    }
+  }
+
+  async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await fetch(`${API_BASE_URL}/users/avatar`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ currentPassword, newPassword })
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+      body: formData,
     });
-    return handleResponse(response);
-  }
 
-  /**
-   * Récupère les préférences de l'utilisateur
-   */
-  async getPreferences(): Promise<Record<string, any>> {
-    const response = await fetch(`${API_BASE_URL}/users/preferences`, {
-      headers: this.getHeaders()
-    });
-    return handleResponse(response);
-  }
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors du téléchargement de l\'avatar');
+    }
 
-  /**
-   * Met à jour les préférences de l'utilisateur
-   */
-  async updatePreferences(preferences: Record<string, any>): Promise<Record<string, any>> {
-    const response = await fetch(`${API_BASE_URL}/users/preferences`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(preferences)
-    });
-    return handleResponse(response);
-  }
-
-  /**
-   * Récupère l'historique des activités de l'utilisateur
-   */
-  async getActivityHistory(): Promise<{
-    type: string;
-    action: string;
-    details: Record<string, any>;
-    timestamp: Date;
-  }[]> {
-    const response = await fetch(`${API_BASE_URL}/users/activity-history`, {
-      headers: this.getHeaders()
-    });
-    return handleResponse(response);
+    return response.json();
   }
 }
 

@@ -1,168 +1,128 @@
-import { API_BASE_URL, headers, handleResponse, getAuthToken } from './config';
+import { API_BASE_URL, getAuthToken } from './config';
 
-import { 
-  INotification, 
-  NotificationResponse, 
-  DeleteReadNotificationsResponse 
-} from '../../types/notification';
+export interface NotificationData {
+  appointmentId?: string;
+  date?: string;
+  oldDate?: string;
+  newDate?: string;
+  type?: string;
+  reason?: string;
+  documentId?: string;
+  fileName?: string;
+  invoiceId?: string;
+  number?: string;
+  amount?: number;
+}
 
-/**
- * Service pour la gestion des notifications
- */
+export interface INotification {
+  id: string;
+  type: 'APPOINTMENT_REMINDER' | 'APPOINTMENT_CANCELLATION' | 'APPOINTMENT_MODIFICATION' |
+        'NEW_DOCUMENT' | 'NEW_INVOICE' | 'INVOICE_PAID' | 'INVOICE_OVERDUE' |
+        'BIRTHDAY_REMINDER' | 'INACTIVITY_ALERT' | 'SYSTEM_NOTIFICATION';
+  title: string;
+  message: string;
+  data?: NotificationData;
+  read: boolean;
+  createdAt: string;
+  severity: 'info' | 'warning' | 'success' | 'error';
+  expiresAt?: string;
+}
+
+export interface NotificationResponse {
+  notifications: INotification[];
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  unreadCount: number;
+}
+
 class NotificationService {
-  private readonly baseUrl = '/notifications';
-  
   private getHeaders() {
-    const token = getAuthToken();
     return {
-      ...headers,
-      Authorization: `Bearer ${token}`
+      'Authorization': `Bearer ${getAuthToken()}`,
+      'Content-Type': 'application/json',
     };
   }
 
-  /**
-   * Récupère toutes les notifications avec pagination
-   */
-  async getAll(page: number = 1, limit: number = 10): Promise<NotificationResponse> {
-    const response = await fetch(
-      `${API_BASE_URL}${this.baseUrl}?page=${page}&limit=${limit}`,
-      {
-        headers: this.getHeaders()
-      }
-    );
-    const data = await handleResponse<NotificationResponse>(response);
-    return {
-      ...data,
-      notifications: data.notifications.map(notification => ({
-        ...notification,
-        createdAt: new Date(notification.createdAt),
-        expiresAt: notification.expiresAt ? new Date(notification.expiresAt) : undefined,
-        data: notification.data ? {
-          ...notification.data,
-          date: notification.data.date ? new Date(notification.data.date) : undefined,
-          oldDate: notification.data.oldDate ? new Date(notification.data.oldDate) : undefined,
-          newDate: notification.data.newDate ? new Date(notification.data.newDate) : undefined,
-        } : undefined
-      }))
-    };
+  async getNotifications(page: number = 1, limit: number = 10): Promise<NotificationResponse> {
+    const response = await fetch(`${API_BASE_URL}/notifications?page=${page}&limit=${limit}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors de la récupération des notifications');
+    }
+
+    return response.json();
   }
 
-  /**
-   * Récupère les notifications non lues
-   */
-  async getUnread(): Promise<INotification[]> {
-    const response = await fetch(
-      `${API_BASE_URL}${this.baseUrl}/unread`,
-      {
-        headers: this.getHeaders()
-      }
-    );
-    const data = await handleResponse<INotification[]>(response);
-    return data.map(notification => ({
-      ...notification,
-      createdAt: new Date(notification.createdAt),
-      expiresAt: notification.expiresAt ? new Date(notification.expiresAt) : undefined,
-      data: notification.data ? {
-        ...notification.data,
-        date: notification.data.date ? new Date(notification.data.date) : undefined,
-        oldDate: notification.data.oldDate ? new Date(notification.data.oldDate) : undefined,
-        newDate: notification.data.newDate ? new Date(notification.data.newDate) : undefined,
-      } : undefined
-    }));
-  }
-
-  /**
-   * Marque une notification comme lue
-   */
   async markAsRead(id: string): Promise<INotification> {
-    const response = await fetch(
-      `${API_BASE_URL}${this.baseUrl}/${id}/read`,
-      {
-        method: 'PUT',
-        headers: this.getHeaders()
-      }
-    );
-    const notification = await handleResponse<INotification>(response);
-    return {
-      ...notification,
-      createdAt: new Date(notification.createdAt),
-      expiresAt: notification.expiresAt ? new Date(notification.expiresAt) : undefined,
-      data: notification.data ? {
-        ...notification.data,
-        date: notification.data.date ? new Date(notification.data.date) : undefined,
-        oldDate: notification.data.oldDate ? new Date(notification.data.oldDate) : undefined,
-        newDate: notification.data.newDate ? new Date(notification.data.newDate) : undefined,
-      } : undefined
-    };
+    const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors du marquage de la notification comme lue');
+    }
+
+    return response.json();
   }
 
-  /**
-   * Marque toutes les notifications comme lues
-   */
-  async markAllAsRead(): Promise<void> {
-    const response = await fetch(
-      `${API_BASE_URL}${this.baseUrl}/read-all`,
-      {
-        method: 'PUT',
-        headers: this.getHeaders()
-      }
-    );
-    await handleResponse(response);
+  async markAllAsRead(): Promise<{ count: number }> {
+    const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors du marquage de toutes les notifications comme lues');
+    }
+
+    return response.json();
   }
 
-  /**
-   * Supprime une notification
-   */
   async delete(id: string): Promise<void> {
-    const response = await fetch(
-      `${API_BASE_URL}${this.baseUrl}/${id}`,
-      {
-        method: 'DELETE',
-        headers: this.getHeaders()
-      }
-    );
-    await handleResponse(response);
+    const response = await fetch(`${API_BASE_URL}/notifications/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors de la suppression de la notification');
+    }
   }
 
-  /**
-   * Supprime toutes les notifications lues
-   */
-  async deleteReadNotifications(): Promise<DeleteReadNotificationsResponse> {
-    const response = await fetch(
-      `${API_BASE_URL}${this.baseUrl}/read`,
-      {
-        method: 'DELETE',
-        headers: this.getHeaders()
-      }
-    );
-    return handleResponse<DeleteReadNotificationsResponse>(response);
+  async deleteReadNotifications(): Promise<{ count: number }> {
+    const response = await fetch(`${API_BASE_URL}/notifications/delete-read`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors de la suppression des notifications lues');
+    }
+
+    return response.json();
   }
 
-  /**
-   * Étend la durée de vie d'une notification
-   */
-  async extendExpiration(id: string, days: number): Promise<INotification> {
-    const response = await fetch(
-      `${API_BASE_URL}${this.baseUrl}/${id}/extend`,
-      {
-        method: 'PUT',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ days })
-      }
-    );
-    const notification = await handleResponse<INotification>(response);
-    return {
-      ...notification,
-      createdAt: new Date(notification.createdAt),
-      expiresAt: notification.expiresAt ? new Date(notification.expiresAt) : undefined,
-      data: notification.data ? {
-        ...notification.data,
-        date: notification.data.date ? new Date(notification.data.date) : undefined,
-        oldDate: notification.data.oldDate ? new Date(notification.data.oldDate) : undefined,
-        newDate: notification.data.newDate ? new Date(notification.data.newDate) : undefined,
-      } : undefined
-    };
+  async getUnreadCount(): Promise<{ count: number }> {
+    const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erreur lors de la récupération du nombre de notifications non lues');
+    }
+
+    return response.json();
   }
 }
 
-export const notificationService =  new NotificationService();
+export default new NotificationService();

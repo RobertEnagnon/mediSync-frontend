@@ -1,231 +1,79 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Bell, 
-  Check, 
-  Trash2, 
-  ChevronLeft, 
-  ChevronRight,
-  RefreshCw,
-  CheckCheck,
-  Calendar,
-  FileText,
-  Receipt
-} from 'lucide-react';
-import { INotification, NotificationResponse, NotificationData } from '../../types/notification';
-import { notificationService } from '../../services/api/notificationService';
-import { useToast } from '../../hooks/use-toast';
+import { Bell, Check, Trash2, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/components/ui/use-toast';
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { ScrollArea } from '../ui/scroll-area';
-import { Skeleton } from '../ui/skeleton';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
+import notificationService, { INotification } from '@/services/api/notificationService';
 
-const NotificationIcon: React.FC<{ type: string }> = ({ type }) => {
-  switch (type) {
-    case 'APPOINTMENT_REMINDER':
-    case 'APPOINTMENT_MODIFICATION':
-    case 'APPOINTMENT_CANCELLATION':
-      return <Calendar className="h-4 w-4" />;
-    case 'NEW_DOCUMENT':
-      return <FileText className="h-4 w-4" />;
-    case 'NEW_INVOICE':
-    case 'INVOICE_PAID':
-    case 'INVOICE_OVERDUE':
-      return <Receipt className="h-4 w-4" />;
-    default:
-      return <Bell className="h-4 w-4" />;
-  }
-};
-
-const NotificationContent: React.FC<{ data: NotificationData }> = ({ data }) => {
-  if (!data) return null;
-
-  return (
-    <div className="mt-1 text-sm">
-      {data.appointmentId && (
-        <p className="text-sm text-gray-500">
-          {data.date && (
-            <>RDV le {new Date(data.date).toLocaleString()}</>
-          )}
-          {data.reason && (
-            <> - {data.reason}</>
-          )}
-        </p>
-      )}
-      {data.invoiceId && (
-        <p className="text-sm text-gray-500">
-          Facture n°{data.number}
-          {data.amount && (
-            <> - {data.amount.toLocaleString()}€</>
-          )}
-        </p>
-      )}
-      {data.documentId && (
-        <p className="text-sm text-gray-500">
-          Document : {data.fileName}
-        </p>
-      )}
-    </div>
-  );
-};
-
-const NotificationItem: React.FC<{
-  notification: INotification;
-  onMarkAsRead: (id: string) => void;
-  onDelete: (id: string) => void;
-}> = ({ notification, onMarkAsRead, onDelete }) => {
-  const getNotificationColor = (type: string, severity: string) => {
-    // Priorité à la sévérité pour la couleur
-    switch (severity) {
-      case 'error':
-        return 'bg-red-100 border-red-200';
-      case 'warning':
-        return 'bg-orange-100 border-orange-200';
-      case 'success':
-        return 'bg-green-100 border-green-200';
-      case 'info':
-        return 'bg-blue-100 border-blue-200';
-      default:
-        // Fallback sur le type si pas de sévérité
-        switch (type) {
-          case 'APPOINTMENT_REMINDER':
-          case 'APPOINTMENT_MODIFICATION':
-            return 'bg-blue-100 border-blue-200';
-          case 'APPOINTMENT_CANCELLATION':
-            return 'bg-red-100 border-red-200';
-          case 'NEW_DOCUMENT':
-          case 'NEW_INVOICE':
-          case 'INVOICE_PAID':
-            return 'bg-green-100 border-green-200';
-          case 'INVOICE_OVERDUE':
-          case 'INACTIVITY_ALERT':
-            return 'bg-orange-100 border-orange-200';
-          default:
-            return 'bg-gray-100 border-gray-200';
-        }
-    }
-  };
-
-  return (
-    <div 
-      className={`p-4 mb-2 rounded-lg border ${getNotificationColor(notification.type, notification.severity)} ${
-        !notification.isRead ? 'border-l-4' : ''
-      }`}
-    >
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <NotificationIcon type={notification.type} />
-            <h4 className="font-semibold">{notification.title}</h4>
-          </div>
-          <p className="text-sm text-gray-600">{notification.message}</p>
-          <NotificationContent data={notification.data} />
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-gray-500">
-              {new Date(notification.createdAt).toLocaleString()}
-            </span>
-            {notification.expiresAt && (
-              <span className="text-xs text-gray-500">
-                - Expire le {new Date(notification.expiresAt).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {!notification.isRead && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onMarkAsRead(notification.id)}
-              title="Marquer comme lu"
-            >
-              <Check className="h-4 w-4" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(notification.id)}
-            title="Supprimer"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/**
- * Centre de notifications principal
- */
-export const NotificationCenter: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-  const [notificationData, setNotificationData] = useState<NotificationResponse>({
-    notifications: [],
-    currentPage: 1,
-    totalPages: 1,
-    totalNotifications: 0
-  });
-  const [unreadNotifications, setUnreadNotifications] = useState<INotification[]>([]);
+export default function NotificationCenter() {
   const { toast } = useToast();
+  const [notifications, setNotifications] = useState<INotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   const fetchNotifications = async (page: number = 1) => {
     try {
       setLoading(true);
-      const data = await notificationService.getAll(page);
-      setNotificationData(data);
-      const unread = await notificationService.getUnread();
-      setUnreadNotifications(unread);
+      const response = await notificationService.getNotifications(page);
+      setNotifications(prev => page === 1 ? response.notifications : [...prev, ...response.notifications]);
+      setUnreadCount(response.unreadCount);
+      setCurrentPage(page);
+      setTotalPages(response.totalPages);
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de charger les notifications",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
   const handleMarkAsRead = async (id: string) => {
     try {
       await notificationService.markAsRead(id);
-      fetchNotifications(notificationData.currentPage);
-      toast({
-        description: "Notification marquée comme lue"
-      });
+      setNotifications(notifications.map(notif =>
+        notif.id === id ? { ...notif, read: true } : notif
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de marquer la notification comme lue",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
-      await notificationService.markAllAsRead();
-      fetchNotifications(notificationData.currentPage);
+      const result = await notificationService.markAllAsRead();
+      setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+      setUnreadCount(0);
       toast({
-        description: "Toutes les notifications ont été marquées comme lues"
+        title: "Succès",
+        description: `${result.count} notifications marquées comme lues`,
       });
     } catch (error) {
       toast({
         title: "Erreur",
-        description: "Impossible de marquer les notifications comme lues",
-        variant: "destructive"
+        description: "Impossible de marquer toutes les notifications comme lues",
+        variant: "destructive",
       });
     }
   };
@@ -233,15 +81,16 @@ export const NotificationCenter: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await notificationService.delete(id);
-      fetchNotifications(notificationData.currentPage);
+      setNotifications(notifications.filter(notif => notif.id !== id));
       toast({
-        description: "Notification supprimée"
+        title: "Succès",
+        description: "Notification supprimée",
       });
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de supprimer la notification",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -249,118 +98,161 @@ export const NotificationCenter: React.FC = () => {
   const handleDeleteRead = async () => {
     try {
       const result = await notificationService.deleteReadNotifications();
-      fetchNotifications(notificationData.currentPage);
+      setNotifications(notifications.filter(notif => !notif.read));
       toast({
-        description: `${result.count} notifications lues supprimées`
+        title: "Succès",
+        description: `${result.count} notifications supprimées`,
       });
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de supprimer les notifications lues",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= notificationData.totalPages) {
-      fetchNotifications(newPage);
+  const handleLoadMore = () => {
+    if (currentPage < totalPages) {
+      fetchNotifications(currentPage + 1);
     }
   };
 
+  const getNotificationIcon = (type: string) => {
+    const iconMap: { [key: string]: JSX.Element } = {
+      APPOINTMENT_REMINDER: <Bell className="h-4 w-4 text-blue-500" />,
+      APPOINTMENT_CANCELLATION: <Bell className="h-4 w-4 text-red-500" />,
+      APPOINTMENT_MODIFICATION: <Bell className="h-4 w-4 text-yellow-500" />,
+      NEW_DOCUMENT: <Bell className="h-4 w-4 text-green-500" />,
+      NEW_INVOICE: <Bell className="h-4 w-4 text-purple-500" />,
+      INVOICE_PAID: <Bell className="h-4 w-4 text-green-500" />,
+      INVOICE_OVERDUE: <Bell className="h-4 w-4 text-red-500" />,
+    };
+    return iconMap[type] || <Bell className="h-4 w-4" />;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  };
+
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-            {unreadNotifications.length > 0 && (
-              <Badge variant="secondary">
-                {unreadNotifications.length} non lues
-              </Badge>
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="ghost" className="relative">
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center"
+            >
+              {unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-[400px] sm:w-[540px]">
+        <SheetHeader className="flex flex-row items-center justify-between">
+          <SheetTitle>Notifications</SheetTitle>
+          <div className="flex space-x-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => fetchNotifications(1)}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleMarkAllAsRead}
+              disabled={unreadCount === 0}
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Tout marquer comme lu
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDeleteRead}
+              disabled={!notifications?.some(n => n.read)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Supprimer lues
+            </Button>
+          </div>
+        </SheetHeader>
+
+        <ScrollArea className="h-[calc(100vh-8rem)] mt-4">
+          <div className="space-y-4">
+            {notifications?.map((notification) => (
+              <div
+                key={notification.id}
+                className={`flex items-start space-x-4 p-4 rounded-lg transition-colors ${
+                  notification.read ? 'bg-secondary/20' : 'bg-secondary'
+                }`}
+              >
+                <div className="flex-shrink-0">
+                  {getNotificationIcon(notification.type)}
+                </div>
+                <div className="flex-grow space-y-1">
+                  <div className="flex items-start justify-between">
+                    <h4 className="font-medium">{notification.title}</h4>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(notification.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {notification.message}
+                  </p>
+                  {notification.data && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {Object.entries(notification.data).map(([key, value]) => (
+                        value && <div key={key}>{`${key}: ${value}`}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-shrink-0 space-y-2">
+                  {!notification.read && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleMarkAsRead(notification.id)}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => handleDelete(notification.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {currentPage < totalPages && (
+              <Button
+                variant="outline"
+                className="w-full mt-4"
+                onClick={handleLoadMore}
+                disabled={loading}
+              >
+                {loading ? 'Chargement...' : 'Charger plus'}
+              </Button>
             )}
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fetchNotifications(notificationData.currentPage)}
-              title="Rafraîchir"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleMarkAllAsRead}
-              disabled={unreadNotifications.length === 0}
-              title="Tout marquer comme lu"
-            >
-              <CheckCheck className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDeleteRead}
-              title="Supprimer les notifications lues"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent>
-        <ScrollArea className="h-[500px] pr-4">
-          {loading ? (
-            Array(5).fill(0).map((_, i) => (
-              <div key={i} className="mb-4">
-                <Skeleton className="h-24 w-full" />
-              </div>
-            ))
-          ) : notificationData.notifications.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Aucune notification
-            </div>
-          ) : (
-            notificationData.notifications.map((notification) => (
-              <NotificationItem
-                key={notification.id}
-                notification={notification}
-                onMarkAsRead={handleMarkAsRead}
-                onDelete={handleDelete}
-              />
-            ))
-          )}
         </ScrollArea>
-      </CardContent>
-
-      {notificationData.totalPages > 1 && (
-        <CardFooter className="flex justify-between items-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(notificationData.currentPage - 1)}
-            disabled={notificationData.currentPage === 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm">
-            Page {notificationData.currentPage} sur {notificationData.totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(notificationData.currentPage + 1)}
-            disabled={notificationData.currentPage === notificationData.totalPages}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </CardFooter>
-      )}
-    </Card>
+      </SheetContent>
+    </Sheet>
   );
-};
+}

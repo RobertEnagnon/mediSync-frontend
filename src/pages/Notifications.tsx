@@ -242,7 +242,7 @@
 // export default Notifications;
 
 import React from 'react';
-import { NotificationCenter } from '../components/Notifications/NotificationCenter';
+import NotificationCenter  from '../components/Notifications/NotificationCenter';
 
 /**
  * Page des notifications
