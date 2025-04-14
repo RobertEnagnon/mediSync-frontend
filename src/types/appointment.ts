@@ -1,27 +1,33 @@
-// frontend/src/types/appointment.ts
-export type AppointmentType = 'consultation' | 'follow-up' | 'emergency' | 'other';
 
-export type AppointmentStatus = 'pending' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+import { IClient } from './client';
 
 export interface IAppointment {
-  _id: string;
+  id: string;
   title: string;
   description?: string;
-  date: string;
-  duration: number;
-  clientId: string;
-  practitionerId: string;
-  type: AppointmentType;
-  status: AppointmentStatus;
-  notes?: string;
+  startTime: string;
+  endTime: string;
   location?: string;
+  clientId: IClient;
+  status: 'scheduled' | 'completed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
-  cancelledAt?: string;
-  cancellationReason?: string;
-  confirmedAt?: string;
-  completedAt?: string;
 }
 
-export type CreateAppointmentDto = Omit<IAppointment, '_id' | 'createdAt' | 'updatedAt' | 'status' | 'cancelledAt' | 'cancellationReason' | 'confirmedAt' | 'completedAt'>;
-export type UpdateAppointmentDto = Partial<CreateAppointmentDto>;
+export interface CreateAppointmentDto {
+  title: string;
+  description?: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  clientId: string;
+  status?: 'scheduled' | 'completed' | 'cancelled';
+}
+
+export type AppointmentStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+export type AppointmentType = 'meeting' | 'training' | 'holiday' | 'other';
+
+
+
+
+export interface UpdateAppointmentDto extends Partial<CreateAppointmentDto> {}

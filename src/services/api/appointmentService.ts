@@ -1,36 +1,82 @@
-import { API_BASE_URL } from './config';
-import { getAuthToken } from './config';
-import { handleResponse } from './config';
+import { API_BASE_URL, getAuthToken } from './config';
+import { parseISO, isValid, differenceInMinutes } from 'date-fns';
 
-export type AppointmentStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-export type AppointmentType = 'meeting' | 'training' | 'holiday' | 'other';
-
-export interface IAppointment {
-  _id: string;
+interface IAppointment {
+  id: string;
   title: string;
   description?: string;
   clientId: string;
-  startDate: string;
-  endDate: string;
+  practitionerId: string;
+  startTime: string;
+  endTime: string;
   location?: string;
   type: AppointmentType;
   status: AppointmentStatus;
-  createdAt: string;
-  updatedAt: string;
 }
 
-export type CreateAppointmentDto = Omit<IAppointment, '_id' | 'createdAt' | 'updatedAt' | 'status'>;
-export type UpdateAppointmentDto = Partial<CreateAppointmentDto>;
+interface CreateAppointmentDto {
+  title: string;
+  description?: string;
+  clientId: string;
+  practitionerId: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  type: AppointmentType;
+  status?: AppointmentStatus;
+}
+
+interface UpdateAppointmentDto extends Partial<CreateAppointmentDto> {}
+
+type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled';
+type AppointmentType = 'meeting' | 'training' | 'holiday' | 'other';
 
 /**
  * Service pour la gestion des rendez-vous
  */
 class AppointmentService {
-  private getHeaders() {
-    const token = getAuthToken();
+  private async getHeaders() {
     return {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${getAuthToken()}`,
       'Content-Type': 'application/json',
+    };
+  }
+
+  private validateAndFormatDate(dateString: string | undefined | null): string {
+    if (!dateString) {
+      const now = new Date();
+      return now.toISOString();
+    }
+
+    try {
+      const date = parseISO(dateString);
+      if (!isValid(date)) {
+        console.error('Date invalide reçue:', dateString);
+        const now = new Date();
+        return now.toISOString();
+      }
+      return date.toISOString();
+    } catch (error) {
+      console.error('Erreur de validation de la date:', dateString, error);
+      const now = new Date();
+      return now.toISOString();
+    }
+  }
+
+  private formatAppointmentForAPI(appointment: Partial<IAppointment>) {
+    const startTime = this.validateAndFormatDate(appointment.startTime);
+    const endTime = this.validateAndFormatDate(appointment.endTime);
+    
+    return {
+      title: appointment.title || 'Sans titre',
+      date: startTime,
+      duration: differenceInMinutes(new Date(endTime), new Date(startTime)),
+      clientId: appointment.clientId || '0',
+      practitionerId: appointment.practitionerId || '0',
+      type: appointment.type || 'meeting',
+      status: appointment.status || 'scheduled',
+      description: appointment.description,
+      location: appointment.location
     };
   }
 
@@ -39,14 +85,36 @@ class AppointmentService {
    */
   async getAll(): Promise<IAppointment[]> {
     const response = await fetch(`${API_BASE_URL}/appointments`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
+    const data = await this.handleResponse<any[]>(response);
+    return data.map(appointment => {
+      if (!appointment || typeof appointment !== 'object') {
+        console.error('Rendez-vous invalide reçu:', appointment);
+        return null;
+      }
 
-    if (!response.ok) {
-      throw new Error('Erreur lors de la récupération des rendez-vous');
-    }
+      try {
+        const startTime = this.validateAndFormatDate(appointment.date);
+        const endTime = new Date(new Date(startTime).getTime() + (appointment.duration || 30) * 60000).toISOString();
 
-    return response.json();
+        return {
+          id: appointment._id || appointment.id || crypto.randomUUID(),
+          title: appointment.title || 'Sans titre',
+          description: appointment.description,
+          clientId: appointment.clientId || '0',
+          practitionerId: appointment.practitionerId || '0',
+          startTime,
+          endTime,
+          location: appointment.location,
+          type: appointment.type || 'meeting',
+          status: appointment.status || 'scheduled'
+        };
+      } catch (error) {
+        console.error('Erreur lors du traitement du rendez-vous:', error);
+        return null;
+      }
+    }).filter(Boolean) as IAppointment[];
   }
 
   /**
@@ -54,59 +122,76 @@ class AppointmentService {
    */
   async getById(id: string): Promise<IAppointment> {
     const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
+    const data = await this.handleResponse<any>(response);
+    const startTime = this.validateAndFormatDate(data.date);
+    const endTime = new Date(new Date(startTime).getTime() + (data.duration || 30) * 60000).toISOString();
 
-    if (!response.ok) {
-      throw new Error('Erreur lors de la récupération du rendez-vous');
-    }
-
-    return response.json();
-  }
-
-  /**
-   * Récupère les rendez-vous d'un client
-   */
-  async getByClientId(clientId: string): Promise<IAppointment[]> {
-    const response = await fetch(`${API_BASE_URL}/appointments/client/${clientId}`, {
-      headers: this.getHeaders()
-    });
-    return handleResponse(response);
+    return {
+      id: data.id || data._id,
+      title: data.title || 'Sans titre',
+      description: data.description,
+      clientId: data.clientId || '0',
+      practitionerId: data.practitionerId || '0',
+      startTime,
+      endTime,
+      location: data.location,
+      type: data.type || 'meeting',
+      status: data.status || 'scheduled'
+    };
   }
 
   /**
    * Crée un nouveau rendez-vous
    */
   async create(appointment: CreateAppointmentDto): Promise<IAppointment> {
+    const appointmentData = this.formatAppointmentForAPI(appointment);
+    
     const response = await fetch(`${API_BASE_URL}/appointments`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(appointment)
+      headers: await this.getHeaders(),
+      body: JSON.stringify(appointmentData)
     });
-
+    
     if (!response.ok) {
       const error = await response.json();
+      console.error('Erreur de création:', error);
       throw new Error(error.message || 'Erreur lors de la création du rendez-vous');
     }
 
-    return response.json();
+    return this.handleResponse(response);
   }
 
   /**
    * Met à jour un rendez-vous
    */
-  async update(id: string, appointment: Partial<IAppointment>): Promise<IAppointment> {
+  async update(id: string, appointment: UpdateAppointmentDto): Promise<IAppointment> {
+    // Récupérer d'abord le rendez-vous existant
+    const existingAppointment = await this.getById(id);
+    
+    // Fusionner les données existantes avec les mises à jour
+    const updatedAppointment = {
+      ...existingAppointment,
+      ...appointment
+    };
+
+    // Formater les données pour l'API
+    const appointmentData = this.formatAppointmentForAPI(updatedAppointment);
+
     const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
       method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(appointment)
+      headers: await this.getHeaders(),
+      body: JSON.stringify(appointmentData)
     });
 
     if (!response.ok) {
-      throw new Error('Erreur lors de la mise à jour du rendez-vous');
+      const error = await response.json();
+      console.error('Erreur de mise à jour:', error);
+      throw new Error(error.message || 'Erreur lors de la mise à jour du rendez-vous');
     }
 
-    return response.json();
+    return this.handleResponse(response);
   }
 
   /**
@@ -115,9 +200,8 @@ class AppointmentService {
   async delete(id: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
       method: 'DELETE',
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
-
     if (!response.ok) {
       throw new Error('Erreur lors de la suppression du rendez-vous');
     }
@@ -130,10 +214,15 @@ class AppointmentService {
     const response = await fetch(
       `${API_BASE_URL}/appointments/date-range?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
       {
-        headers: this.getHeaders()
+        headers: await this.getHeaders()
       }
     );
-    return handleResponse(response);
+    const data = await this.handleResponse<any[]>(response);
+    return data.map(appointment => ({
+      ...appointment,
+      startTime: this.validateAndFormatDate(appointment.date),
+      endTime: new Date(new Date(appointment.date).getTime() + (appointment.duration || 30) * 60000).toISOString(),
+    }));
   }
 
   /**
@@ -141,9 +230,14 @@ class AppointmentService {
    */
   async getUpcoming(): Promise<IAppointment[]> {
     const response = await fetch(`${API_BASE_URL}/appointments/upcoming`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
-    return handleResponse(response);
+    const data = await this.handleResponse<any[]>(response);
+    return data.map(appointment => ({
+      ...appointment,
+      startTime: this.validateAndFormatDate(appointment.date),
+      endTime: new Date(new Date(appointment.date).getTime() + (appointment.duration || 30) * 60000).toISOString(),
+    }));
   }
 
   /**
@@ -163,9 +257,9 @@ class AppointmentService {
     upcoming: number;
   }> {
     const response = await fetch(`${API_BASE_URL}/appointments/statistics`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
-    return handleResponse(response);
+    return this.handleResponse(response);
   }
 
   /**
@@ -173,9 +267,14 @@ class AppointmentService {
    */
   async search(query: string): Promise<IAppointment[]> {
     const response = await fetch(`${API_BASE_URL}/appointments/search?q=${query}`,{
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
-    return handleResponse(response);
+    const data = await this.handleResponse<any[]>(response);
+    return data.map(appointment => ({
+      ...appointment,
+      startTime: this.validateAndFormatDate(appointment.date),
+      endTime: new Date(new Date(appointment.date).getTime() + (appointment.duration || 30) * 60000).toISOString(),
+    }));
   }
 
   /**
@@ -194,9 +293,14 @@ class AppointmentService {
     if (filters.practitionerId) params.append('practitionerId', filters.practitionerId);
     
     const response = await fetch(`${API_BASE_URL}/appointments/filter?${params}`,{
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
-    return handleResponse(response);
+    const data = await this.handleResponse<any[]>(response);
+    return data.map(appointment => ({
+      ...appointment,
+      startTime: this.validateAndFormatDate(appointment.date),
+      endTime: new Date(new Date(appointment.date).getTime() + (appointment.duration || 30) * 60000).toISOString(),
+    }));
   }
 
   /**
@@ -204,10 +308,23 @@ class AppointmentService {
    */
   async getHistory(): Promise<IAppointment[]> {
     const response = await fetch(`${API_BASE_URL}/appointments/history`, {
-      headers: this.getHeaders()
+      headers: await this.getHeaders()
     });
-    return handleResponse(response);
+    const data = await this.handleResponse<any[]>(response);
+    return data.map(appointment => ({
+      ...appointment,
+      startTime: this.validateAndFormatDate(appointment.date),
+      endTime: new Date(new Date(appointment.date).getTime() + (appointment.duration || 30) * 60000).toISOString(),
+    }));
+  }
+
+  private async handleResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Une erreur est survenue');
+    }
+    return response.json();
   }
 }
 
-export const appointmentService = new AppointmentService();
+export default new AppointmentService();

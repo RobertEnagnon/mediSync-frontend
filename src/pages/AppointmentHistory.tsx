@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { appointmentService } from "@/services/api/appointmentService";
+import  appointmentService  from "@/services/api/appointmentService";
 import { IAppointment, AppointmentStatus } from "@/types/appointment";
 
 const AppointmentHistory = () => {

@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { clientService } from '@/services/api/clientService';
-import { appointmentService } from '@/services/api/appointmentService';
+import  appointmentService  from '@/services/api/appointmentService';
 import { noteService } from '@/services/api/noteService';
 import { IClient } from '@/types/client';
 import { IAppointment, AppointmentType } from '@/types/appointment';

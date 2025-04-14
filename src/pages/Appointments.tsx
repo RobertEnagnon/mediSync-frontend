@@ -45,9 +45,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
+import 
   appointmentService
-} from '@/services/api/appointmentService';
+ from '@/services/api/appointmentService';
 import {
   clientService
 } from '@/services/api/clientService';

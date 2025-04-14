@@ -40,6 +40,7 @@ export const getAuthToken = (): string | null => {
 
   try {
     const { state } = JSON.parse(authStorage);
+    // console.log(state);
     return state?.token || null;
   } catch {
     return null;
