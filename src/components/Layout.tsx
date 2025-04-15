@@ -17,7 +17,7 @@ export const Layout = ({ children }: LayoutProps) => {
         <AppSidebar open={open} setOpen={setOpen} />
        
       </div>
-      <div className="lg:hidden absolute top-5 left-5 z-50">
+      <div className="lg:hidden absolute top-1 left-1 z-50">
         {/* <AppSidebar open={open} setOpen={setOpen} /> */}
         <Button
           onClick={() => setOpen(!open)}

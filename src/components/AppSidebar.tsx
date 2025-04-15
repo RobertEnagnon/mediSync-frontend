@@ -143,8 +143,9 @@ export const AppSidebar = ({ open, setOpen }: { open: boolean; setOpen: (open: b
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center border-b px-6">
         <Link to="/" className="flex items-center gap-2 font-semibold">
-          <img src="/logo.png" alt="Logo" className="h-8 w-8" />
-          <span className="text-lg">MediSync Pro</span>
+          <img src="/logo.png" alt="Logo" className='pt-4'  />
+          {/* <img src="/logo.png" alt="Logo" className="h-8 w-8" /> */}
+          {/* <span className="text-lg">MediSync Pro</span> */}
         </Link>
       </div>
       <ScrollArea className="flex-1 px-3">
