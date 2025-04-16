@@ -20,6 +20,8 @@ export default function NotificationCenter() {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [filter, setFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'unread'>('date');
 
   useEffect(() => {
     fetchNotifications();
@@ -178,21 +180,59 @@ export default function NotificationCenter() {
               <Check className="h-4 w-4 mr-2" />
               Tout marquer comme lu
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleDeleteRead}
-              disabled={!notifications?.some(n => n.read)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Supprimer lues
-            </Button>
+            <div className="flex items-center space-x-2">
+              <select
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              >
+                <option value="all">Tous</option>
+                <option value="APPOINTMENT">Rendez-vous</option>
+                <option value="DOCUMENT">Documents</option>
+                <option value="INVOICE">Factures</option>
+                <option value="unread">Non lus</option>
+              </select>
+
+              <select
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'unread')}
+              >
+                <option value="date">Date</option>
+                <option value="unread">Non lus en premier</option>
+              </select>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDeleteRead}
+                disabled={!notifications?.some(n => n.read)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Supprimer lues
+              </Button>
+            </div>
           </div>
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-8rem)] mt-4">
           <div className="space-y-4">
-            {notifications?.map((notification) => (
+            {notifications
+              ?.filter(notification => {
+                if (filter === 'all') return true;
+                if (filter === 'unread') return !notification.read;
+                return notification.type.startsWith(filter);
+              })
+              ?.sort((a, b) => {
+                if (sortBy === 'unread') {
+                  if (a.read === b.read) {
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                  }
+                  return a.read ? 1 : -1;
+                }
+                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              })
+              ?.map((notification) => (
               <div
                 key={notification.id}
                 className={`flex items-start space-x-4 p-4 rounded-lg transition-colors ${
