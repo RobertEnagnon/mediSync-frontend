@@ -16,7 +16,6 @@ class ClientService {
     return {
       ...headers,
       Authorization: `Bearer ${this.token}`,
-      'Content-Type': 'application/json',
     };
   }
 
@@ -122,6 +121,7 @@ class ClientService {
         headers: this.getHeaders(),
       }
     );
+    console.log(response)
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des anniversaires à venir');
     }
