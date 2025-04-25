@@ -102,7 +102,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-8">
       {/* Section des statistiques */}
-      <Statistics />
+      <Statistics statsFromDashboard={dashboardStats.stats} />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Graphique d'activité */}

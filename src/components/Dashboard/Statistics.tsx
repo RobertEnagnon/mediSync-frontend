@@ -30,7 +30,7 @@ interface StatisticsData {
 }
 import { API_BASE_URL,getAuthToken } from '@/services/api/config';
 
-export default function Statistics() {
+export default function Statistics({ statsFromDashboard }: { statsFromDashboard: any }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<StatisticsData | null>(null);
@@ -84,15 +84,19 @@ export default function Statistics() {
   const cards = [
     {
       title: "Rendez-vous",
-      value: stats.totalAppointments,
-      description: `${stats.upcomingAppointments} rendez-vous à venir`,
+      // value: stats.totalAppointments,
+      value: statsFromDashboard.totalAppointments,
+      // description: `${stats.upcomingAppointments} rendez-vous à venir`,
+      description: `${statsFromDashboard.totalAppointments} rendez-vous à venir`,
       icon: Calendar,
       color: "text-blue-500",
     },
     {
       title: "Clients",
-      value: stats.totalClients,
-      description: `${stats.activeClients} clients actifs`,
+      // value: stats.totalClients,
+      value: statsFromDashboard.totalClients,
+      // description: `${stats.activeClients} clients actifs`,
+      description: `${statsFromDashboard.totalClients} clients actifs`,
       icon: Users,
       color: "text-green-500",
     },

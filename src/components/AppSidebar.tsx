@@ -141,11 +141,9 @@ export const AppSidebar = ({ open, setOpen }: { open: boolean; setOpen: (open: b
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center border-b px-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold">
-          <img src="/logo.png" alt="Logo" className='pt-4'  />
-          {/* <img src="/logo.png" alt="Logo" className="h-8 w-8" /> */}
-          {/* <span className="text-lg">MediSync Pro</span> */}
+      <div className="flex h-16 items-center justify-between border-b px-4">
+        <Link to="/" className="flex items-center gap-2 border-t-2">
+          <img src="/logo.png" alt="Logo" className="h-[80%] w-[80%]" />
         </Link>
       </div>
       <ScrollArea className="flex-1 px-3">
@@ -172,33 +170,9 @@ export const AppSidebar = ({ open, setOpen }: { open: boolean; setOpen: (open: b
   );
 
   return (
-    <>
-      {/* Version mobile */}
-      <div className="lg:hidden">
-        <Sheet open={open} onOpenChange={setOpen}>
-          {/* <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              className="px-2 py-2"
-            >
-              {open ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </Button>
-          </SheetTrigger> */}
-          <SheetContent side="left" className="w-72 p-0">
-            <SidebarContent />
-          </SheetContent>
-        </Sheet>
-      </div>
-
-      {/* Version desktop */}
-      <div className="h-screen w-72 border-r bg-background">
-        <SidebarContent />
-      </div>
-    </>
+    <div className="h-full w-72 border-r bg-background">
+      <SidebarContent />
+    </div>
   );
 };
 

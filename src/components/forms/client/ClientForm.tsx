@@ -136,7 +136,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Date de naissance</FormLabel>
-              <Popover >
+              <Popover modal={true}>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
@@ -152,7 +152,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white" align="start">
+                <PopoverContent className="w-auto p-0 bg-white z-50" align="start" sideOffset={5}>
                   <div className="flex items-center gap-2 p-3 border-b ">
                     <Select
                       value={calendarYear.toString()}
@@ -161,7 +161,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                       <SelectTrigger className="w-[120px]">
                         <SelectValue placeholder="Année" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white">
                         {years.map((year) => (
                           <SelectItem key={year} value={year.toString()}>
                             {year}
