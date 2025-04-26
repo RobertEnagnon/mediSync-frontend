@@ -12,13 +12,15 @@ export interface NotificationData {
   invoiceId?: string;
   number?: string;
   amount?: number;
+  clientId?: string;
 }
 
 export interface INotification {
   id: string;
   type: 'APPOINTMENT_REMINDER' | 'APPOINTMENT_CANCELLATION' | 'APPOINTMENT_MODIFICATION' |
         'NEW_DOCUMENT' | 'NEW_INVOICE' | 'INVOICE_PAID' | 'INVOICE_OVERDUE' |
-        'BIRTHDAY_REMINDER' | 'INACTIVITY_ALERT' | 'SYSTEM_NOTIFICATION';
+        'BIRTHDAY_REMINDER' | 'INACTIVITY_ALERT' | 'SYSTEM_NOTIFICATION' | 
+        'CLIENT_CREATED' | 'CLIENT_UPDATED' | 'CLIENT_DELETED';
   title: string;
   message: string;
   data?: NotificationData;
@@ -54,7 +56,20 @@ class NotificationService {
       throw new Error(error.message || 'Erreur lors de la récupération des notifications');
     }
 
-    return response.json();
+    // Récupérer les données du backend
+    const data = await response.json();
+    
+    // Adapter le format aux attentes du frontend
+    return {
+      notifications: data.notifications.map((notif: any) => ({
+        ...notif,
+        id: notif._id // Ajouter un champ id basé sur _id pour la compatibilité
+      })),
+      currentPage: data.currentPage,
+      totalPages: data.totalPages,
+      totalItems: data.totalNotifications || 0,
+      unreadCount: data.notifications.filter((n: any) => !n.read).length
+    };
   }
 
   async markAsRead(id: string): Promise<INotification> {

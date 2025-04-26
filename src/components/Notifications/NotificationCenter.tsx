@@ -31,6 +31,7 @@ export default function NotificationCenter() {
     try {
       setLoading(true);
       const response = await notificationService.getNotifications(page);
+
       setNotifications(prev => page === 1 ? response.notifications : [...prev, ...response.notifications]);
       setUnreadCount(response.unreadCount);
       setCurrentPage(page);
@@ -159,8 +160,8 @@ export default function NotificationCenter() {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[400px] sm:w-[540px]">
-        <SheetHeader className="flex flex-row items-center justify-between">
+      <SheetContent className="min-w-[400px] sm:min-w-[740px] mr-32">
+        <SheetHeader className="flex flex-row flex-wrap items-center justify-between">
           <SheetTitle>Notifications</SheetTitle>
           <div className="flex space-x-2">
             <Button
@@ -180,7 +181,7 @@ export default function NotificationCenter() {
               <Check className="h-4 w-4 mr-2" />
               Tout marquer comme lu
             </Button>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center flex-wrap justify-start gap-1 space-x-2">
               <select
                 className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                 value={filter}
@@ -234,7 +235,7 @@ export default function NotificationCenter() {
               })
               ?.map((notification) => (
               <div
-                key={notification.id}
+                key={notification.id || notification._id}
                 className={`flex items-start space-x-4 p-4 rounded-lg transition-colors ${
                   notification.read ? 'bg-secondary/20' : 'bg-secondary'
                 }`}
@@ -265,7 +266,7 @@ export default function NotificationCenter() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => handleMarkAsRead(notification.id)}
+                      onClick={() => handleMarkAsRead(notification.id || notification._id)}
                     >
                       <Check className="h-4 w-4" />
                     </Button>
@@ -273,7 +274,7 @@ export default function NotificationCenter() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    onClick={() => handleDelete(notification.id)}
+                    onClick={() => handleDelete(notification.id || notification._id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
