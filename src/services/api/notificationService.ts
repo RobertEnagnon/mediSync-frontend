@@ -17,6 +17,7 @@ export interface NotificationData {
 
 export interface INotification {
   id: string;
+  _id?: string; // Pour prendre en compte les deux formats possibles de l'ID
   type: 'APPOINTMENT_REMINDER' | 'APPOINTMENT_CANCELLATION' | 'APPOINTMENT_MODIFICATION' |
         'NEW_DOCUMENT' | 'NEW_INVOICE' | 'INVOICE_PAID' | 'INVOICE_OVERDUE' |
         'BIRTHDAY_REMINDER' | 'INACTIVITY_ALERT' | 'SYSTEM_NOTIFICATION' | 

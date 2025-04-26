@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Bell, Check, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,49 +11,49 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import notificationService, { INotification } from '@/services/api/notificationService';
+import { INotification } from '@/services/api/notificationService';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export default function NotificationCenter() {
   const { toast } = useToast();
-  const [notifications, setNotifications] = useState<INotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [filter, setFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'unread'>('date');
+  
+  // Utiliser le hook centralisé pour les notifications
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    currentPage,
+    totalPages,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead: markAllAsReadFn,
+    deleteNotification,
+    deleteReadNotifications
+  } = useNotifications();
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const fetchNotifications = async (page: number = 1) => {
-    try {
-      setLoading(true);
-      const response = await notificationService.getNotifications(page);
-
-      setNotifications(prev => page === 1 ? response.notifications : [...prev, ...response.notifications]);
-      setUnreadCount(response.unreadCount);
-      setCurrentPage(page);
-      setTotalPages(response.totalPages);
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les notifications",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  // Le chargement initial est maintenant géré par le hook useNotifications
+  
+  // Fonction pour charger plus de notifications lors du défilement
+  const handleLoadMore = () => {
+    if (currentPage < totalPages) {
+      console.log(`🔍 Chargement de la page suivante: ${currentPage + 1}`);
+      fetchNotifications(currentPage + 1);
     }
   };
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await notificationService.markAsRead(id);
-      setNotifications(notifications.map(notif =>
-        notif.id === id ? { ...notif, read: true } : notif
-      ));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      console.log(`🔎 NotificationCenter - Appel de markAsRead pour ${id}`);
+      const success = await markAsRead(id);
+      
+      if (success) {
+        toast({
+          title: "Succès",
+          description: "Notification marquée comme lue",
+        });
+      }
     } catch (error) {
       toast({
         title: "Erreur",
@@ -65,9 +65,7 @@ export default function NotificationCenter() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const result = await notificationService.markAllAsRead();
-      setNotifications(notifications.map(notif => ({ ...notif, read: true })));
-      setUnreadCount(0);
+      const result = await markAllAsReadFn();
       toast({
         title: "Succès",
         description: `${result.count} notifications marquées comme lues`,
@@ -83,12 +81,13 @@ export default function NotificationCenter() {
 
   const handleDelete = async (id: string) => {
     try {
-      await notificationService.delete(id);
-      setNotifications(notifications.filter(notif => notif.id !== id));
-      toast({
-        title: "Succès",
-        description: "Notification supprimée",
-      });
+      const success = await deleteNotification(id);
+      if (success) {
+        toast({
+          title: "Succès",
+          description: "Notification supprimée",
+        });
+      }
     } catch (error) {
       toast({
         title: "Erreur",
@@ -100,8 +99,7 @@ export default function NotificationCenter() {
 
   const handleDeleteRead = async () => {
     try {
-      const result = await notificationService.deleteReadNotifications();
-      setNotifications(notifications.filter(notif => !notif.read));
+      const result = await deleteReadNotifications();
       toast({
         title: "Succès",
         description: `${result.count} notifications supprimées`,
@@ -115,11 +113,7 @@ export default function NotificationCenter() {
     }
   };
 
-  const handleLoadMore = () => {
-    if (currentPage < totalPages) {
-      fetchNotifications(currentPage + 1);
-    }
-  };
+
 
   const getNotificationIcon = (type: string) => {
     const iconMap: { [key: string]: JSX.Element } = {
@@ -134,15 +128,30 @@ export default function NotificationCenter() {
     return iconMap[type] || <Bell className="h-4 w-4" />;
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) {
+      return 'Date inconnue';
+    }
+    
+    try {
+      // Vérifier si la date est valide
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.warn('Date invalide:', dateString);
+        return 'Date invalide';
+      }
+      
+      return new Intl.DateTimeFormat('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(date);
+    } catch (error) {
+      console.error('Erreur lors du formatage de la date:', error);
+      return 'Erreur de date';
+    }
   };
 
   return (
@@ -160,7 +169,7 @@ export default function NotificationCenter() {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="min-w-[400px] sm:min-w-[740px] mr-32">
+      <SheetContent className="min-w-[400px] sm:min-w-[740px] mr-2">
         <SheetHeader className="flex flex-row flex-wrap items-center justify-between">
           <SheetTitle>Notifications</SheetTitle>
           <div className="flex space-x-2">

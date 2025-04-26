@@ -38,7 +38,8 @@ export class WebSocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('Socket.IO connected');
+      console.log('🔌 Socket.IO connected with ID:', this.socket.id);
+      console.log('🔑 Auth token used:', getAuthToken()?.substring(0, 15) + '...');
       this.reconnectAttempts = 0;
       this.sendQueuedMessages();
     });
@@ -53,6 +54,7 @@ export class WebSocketService {
     });
 
     this.socket.on('notification', (data) => {
+      console.log('📨 WebSocketService received notification:', data);
       this.handleMessage('notification', data);
     });
 
