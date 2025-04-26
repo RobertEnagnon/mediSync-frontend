@@ -320,8 +320,8 @@ const Documents = () => {
 
       {/* Liste des documents */}
       <div className="grid gap-4">
-        {currentDocuments.map((document) => (
-          <Card key={document._id} className="p-6">
+        {currentDocuments?.map((document) => (
+          <Card key={document._id || document.id} className="p-6">
             <div className="flex flex-col sm:flex-row justify-between gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">

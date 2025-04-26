@@ -634,19 +634,23 @@ export default function Appointments() {
                       <div className="flex items-center gap-2 text-gray-500">
                         <Calendar className="h-4 w-4" />
                         <span>
-                          {format(parseISO(appointment.startTime), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
+                          {appointment.startTime && typeof appointment.startTime === 'string'
+                            ? format(parseISO(appointment.startTime), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })
+                            : 'Date non définie'}
                         </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <Clock className="h-4 w-4" />
-                        <span>{appointment.duration} minutes</span>
                       </div>
 
                       {appointment.location && (
                         <div className="flex items-center gap-2 text-gray-500">
                           <MapPin className="h-4 w-4" />
                           <span>{appointment.location}</span>
+                        </div>
+                      )}
+
+                      {appointment.duration && (
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Clock className="h-4 w-4" />
+                          <span>{appointment.duration} minutes</span>
                         </div>
                       )}
 
