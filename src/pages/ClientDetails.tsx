@@ -67,7 +67,7 @@ export default function ClientDetails() {
         
         const [clientData, appointmentsData, notesData] = await Promise.all([
           clientService.getById(id),
-          appointmentService.getById(id),
+          appointmentService.getByClientId(id),
           noteService.getNotesByClientId(id)
         ]);
 

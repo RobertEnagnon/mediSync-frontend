@@ -171,6 +171,47 @@ class AppointmentService {
       updatedAt: data.updatedAt,
     };
   }
+  /**
+   * Récupère un rendez-vous par  l'ID du client
+   */
+  async getByClientId(id: string): Promise<IAppointment[]> {
+    const response = await fetch(`${API_BASE_URL}/appointments/client/${id}`, {
+      headers: await this.getHeaders()
+    });
+    const data = await this.handleResponse<any[]>(response);
+    return data.map(appointment => {
+      if (!appointment || typeof appointment !== 'object') {
+        console.error('Rendez-vous invalide reçu:', appointment);
+        return null;
+      }
+
+      try {
+        const startTime = this.validateAndFormatDate(appointment.date);
+        const endTime = new Date(new Date(startTime).getTime() + (appointment.duration || 30) * 60000).toISOString();
+
+        return {
+          id: appointment._id || appointment.id || crypto.randomUUID(),
+          title: appointment.title || 'Sans titre',
+          description: appointment.description,
+          clientId: appointment.clientId || '0',
+          practitionerId: appointment.practitionerId || '0',
+          startTime,
+          endTime,
+          location: appointment.location,
+          type: appointment.type || 'meeting',
+          status: appointment.status || 'scheduled',
+          notes: appointment.notes,
+          date: appointment.date,
+          duration: appointment.duration,
+          createdAt: appointment.createdAt,
+          updatedAt: appointment.updatedAt,
+        };
+      } catch (error) {
+        console.error('Erreur lors du traitement du rendez-vous:', error);
+        return null;
+      }
+    }).filter(Boolean) as IAppointment[];
+  }
 
   /**
    * Crée un nouveau rendez-vous
